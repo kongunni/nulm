@@ -5,7 +5,9 @@ npm-debug.log* #npm 디버그 로그
 
 #운영체제 관련
 .DS_Store #macOs임시파일
+Thumbs.db
 
 #IDE 
 .vscode/
+.idea/
 *.swp
