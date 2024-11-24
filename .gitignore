@@ -1,0 +1,11 @@
+#Node.js
+node_modules/ #설치된 의존성 디렉토리
+npm-debug.log* #npm 디버그 로그
+.env #환경변수파일
+
+#운영체제 관련
+.DS_Store #macOs임시파일
+
+#IDE 
+.vscode/
+*.swp
