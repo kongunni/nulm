@@ -1,0 +1,477 @@
+<!DOCTYPE html>
+<html lang="UTF-8">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>nulm. </title>
+    <link rel="stylesheet" href="css/common.css">
+    <link rel="stylesheet" href="css/chat.css">
+    <link rel="stylesheet" href="css/fonts.css">
+</head>
+<body>
+    <div id="main" style="overflow-x: hidden;">
+        <header class="nav-container" style="width: 100%;">
+            <div class="box nav-logo-container logo" >
+                <a href="index.html">Nulm.</a>
+            </div>
+            <nav class="box nav-menu-container nav">
+                <a href="index.html">HOME</a>
+                <a href="aboutPage.html">ABOUT</a>
+                <a href="chat.html">CHAT</a>
+                <!-- <a href="#">CONTACT</a> -->
+            </nav>
+            <div class="box nav-contact-container contact-button">
+                <button id="contactBtn">CONCTACT</button>
+            </div>
+            <div class="hamburger-menu" onclick="toggleMenu()">☰</div>
+        </header>
+
+         <!-- full screen navigation -->
+         <div class="full-screen-nav" id="fullScreenNav">
+            <div class="full-screen-nav-content">
+                <div class="logo"> nulm. </div>
+                <a href="index.html">HOME</a>
+                <a href="aboutPage.html">ABOUT</a>
+                <a href="chatPage.html">CHAT</a>
+                <a href="#">CONTACT</a>
+            </div>
+            <div class="full-screen-nav-close-btn" onclick="toggleMenu()">✖</div>
+        </div>
+        
+        <!-- 화면 영역 -->
+        <div class="chat-container">
+            <div class="chat-button-container" id="chatButtonContainer">
+                <div class="enter-section">
+                    <img id="coverImg" src="images/cover-chatPage.jpg" alt="">
+                    <button id="enterBtn"> >> enter << </button>
+                </div>
+            </div>
+            <div class="chat-section" id="chatSection">
+                <div class="chat-box" id="chatBox" style="display: none;">
+                    <div class="chat-header-container">
+                        <div class="chat-header" id="chatHeader"></div>
+                        <!-- <button id="reportBtn" class="chat-header-btn" type="button" onclick="openReportModal()">🚨</button> -->
+                        <div class="chat-btn">
+                            <button id="restartBtn" class="chat-header-btn" type="button">↻</button>
+                            <button id="exitBtn" class="chat-header-btn" type="button"> ✖ </button>
+                        </div>
+                    </div>
+
+                    <!--report modal-->
+                    <div id="reportModal" class="report-container" style="display: none;">
+                        <div id="modalHeader">
+                            <!-- <h1>report</h1> -->
+                        </div>
+                        <div id="modal-section">
+                            <form id="reportForm">
+                                <label><input type="checkbox" name="reason" value="스팸">스팸</label>
+                                <label><input type="checkbox" name="reason" value="비속어">비속어</label>
+                                <label><input type="checkbox" name="reason" value="금전요구">금전요구</label>
+                                <label><input type="checkbox" name="reason" value="기타">기타</label>
+                                <div class="reportBtn">
+                                    <button id="reportSubmitBtn" class="report-form-btn" type="button" onclick="submitReport()">신고</button>
+                                    <button id="reportCancelBtn" class="report-form-btn" type="button" onclick="closeReportModal()">취소</button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+
+                    <div class="chat-framer">
+                         <!-- 공지-->
+                        <div class="chat-notification-container" id="notificationBox">
+                            <div class="scrolling-text" id="scrollingText">
+                                ✢ 백그라운드 전환 상태에서 3시간 경과시,
+                                자동으로 연결이 종료될 수 있음을 알립니다.
+                            </div>
+                        </div>
+                        <div class="chat-message" id="messages"></div>
+                        <div class="input-container">
+                            <!-- <div id="inputBox" class="input-box" style="display: none;"> -->
+                            <div id="inputBox" class="input-box">
+                                <input id="message" class="input-msg" type="text"  autocomplete="off">
+                                <button id="emoji-btn">
+                                    <img src="images/icon_emoji.PNG" alt="" width="20px">
+                                </button>
+                                <button id="send">send</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div> <!--chat container-->
+
+        <!-- footer 영역 -->
+        <footer class="footer">
+            <div class="footer-content">
+                <p>Nulm.</p>
+                <p>GASAN, GEUMCHEON, SEOUL, KOREA</p>
+                <p>YI JI YEONG</p>
+                <p>+82 10 5072 3383</p>
+                <p>KONGUNNI821@GMAIL.COM</p>
+            </div>
+        </footer>
+
+    </div> <!--main-->
+
+<script src="https://cdn.jsdelivr.net/npm/emoji-mart@latest/dist/browser.js"></script>
+<script src="socket.io/socket.io.js"></script> <!-- socket -->
+<script>
+    let socket;
+    let roomId; 
+    let partnerNickname;
+
+    // hamburger menu
+    function toggleMenu() {
+        const fullScreenNav = document.getElementById('fullScreenNav');
+        fullScreenNav.classList.toggle('open');
+    }
+    // modal open
+    function openReportModal() {
+        const reportModal  = document.getElementById('reportModal');
+        reportModal.style.display = 'flex';
+    }
+
+    // modal close
+    function closeReportModal() {
+        const reportModal  = document.getElementById('reportModal');
+        reportModal.style.display ='none';
+    }
+
+    //report submit
+     function submitReport() {
+            const reportForm = document.getElementById('reportForm');
+            const reasons = Array.from(reportForm.querySelectorAll('input[name="reason"]:checked')).map(input => input.value);
+            
+            if(reasons.length === 0) {
+                alert('신고 사유를 선택해 주세요. ');
+                return;
+            }
+
+            console.log('roomId: ', roomId, 'partner: ', partnerNickname, '[IP:', partnerIP , ']', 'reason: ', reasons);
+            
+            if (!roomId || !partnerNickname || !partnerIP) {
+                alert('잘못된 요청입니다. 다시 시도해 주세요. ');
+                return;
+            }
+
+            fetch('/chat/report', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    reasons,
+                    roomId,
+                    partnerNickname,
+                    partnerIP
+                })
+            })
+            .then(response => {
+                if (!response.ok) throw new Error(`HTTP error: ${response.status}`);
+                return response.json();
+            })
+            .then(data => {
+                alert(data.message); // 서버 응답 처리
+                console.log('[client] server repsponse data: ', data);
+                if (socket && roomId) {
+                    console.log('[client] Calling socket.emit for report-disconnected...');
+                    socket.emit('report-disconnected', { roomId });
+                }
+                closeReportModal();
+            })
+            .catch(err => {
+                console.error('Error reporting user:', err);
+                alert('신고 처리 중 오류가 발생했습니다.');
+            });
+        }
+
+
+
+    
+    /* 채팅 클라이언트 */
+    document.addEventListener('DOMContentLoaded', function() {
+        const socket = io();
+
+        const chatButtonContainer = document.getElementById('chatButtonContainer'); 
+        const chatBox = document.getElementById('chatBox');
+        const enterBtn = document.getElementById('enterBtn');
+        const chatHeader = document.getElementById('chatHeader');
+        const sendButton = document.getElementById('send');
+        const mediaQuery = window.matchMedia('(max-width: 390px)'); //모바일규격
+        const messages = document.getElementById('messages');
+        const messageInput = document.getElementById('message');
+        const inputBox = document.getElementById('inputBox');
+
+        let myNickname = ''; // 내 닉네임 저장 변수
+        let chatStarted = false; // 채팅 시작상태
+        let isProcessing = false; // 중복 입력 방지를 위한 플래그 변수
+
+        if (!messageInput) {
+            console.error('<input id="message"> not found after DOMContentLoaded');
+        }
+
+        // 사용자가 enter 클릭시 채팅창 화면에 나타내기
+         enterBtn.addEventListener('click', function() {
+            if(!chatStarted) {
+                chatBox.style.display = 'flex';
+                chatButtonContainer.style.display = 'none';
+                chatStarted = true;
+                socket.emit('enter-state');
+            }
+        });
+
+        // session 액션 처리
+        document.addEventListener('visibilitychange', () => {
+            if (document.visibilityState === 'visible') {
+                console.log('[client] Tab returned to foreground. Reset session.');
+                socket.emit('session-action', 'reset');
+            } else if (document.visibilityState === 'hidden') {
+                console.log('[client] Tab moved to background.');
+                socket.emit('session-action', 'background');
+            }
+        });
+
+        // chat-notification
+        const notificationBox = document.getElementById('notificationBox');
+        setTimeout( ()=> {
+            notificationBox.style.display ='none';
+        }, 15500 ); 
+
+
+        /* 
+        * emoji 
+        */
+        const emojiBtn = document.getElementById('emoji-btn');
+
+        const pickerOptions = {
+            onEmojiSelect: (emoji) => {
+                const input = document.getElementById('message'); 
+                if(input) {
+                    input.value += emoji.native;
+                    console.log('Emoji added:', messageInput.value);
+                } else {
+                    console.error('<input> not found');
+                }
+            },
+        };
+       
+        const picker = new EmojiMart.Picker(pickerOptions);
+        picker.style.display = 'none';
+        picker.style.position = 'absolute';
+        picker.style.width = '360px';
+        picker.style.maxHeight = '300px';
+        picker.style.overflowX = 'hidden';
+        picker.style.overflowY = 'auto';
+        document.body.appendChild(picker);
+
+        // Picker 위치 업데이트
+        function updatePickerPosition() {
+            const inputContainer = document.querySelector('.input-container');
+            const inputRect = inputContainer.getBoundingClientRect();
+            picker.style.top = `${window.scrollY + inputRect.top - picker.offsetHeight - 10}px`; // 10px 여백
+            picker.style.left = `${inputRect.left + inputRect.width / 2 - picker.offsetWidth / 2}px`;
+        }
+
+        // Picker 숨기기 함수
+        function hidePicker() {
+            if (picker && picker.style.display === 'block') {
+                picker.style.display = 'none';
+            }
+        }
+
+        // 이모지 클릭시 클릭위치에 오게 처리
+        emojiBtn.addEventListener('click', (event) => {
+            if (picker.style.display === 'none' || picker.style.display === '') {
+                picker.style.display = 'block';
+                updatePickerPosition();
+            } else {
+                hidePicker();
+            }
+        });
+
+
+        // 다른 영역 클릭시 숨김 처리
+        document.addEventListener('click', (event) => {
+            const isClickInsidePicker = picker.contains(event.target);
+            const isClickOnEmojiButton = emojiBtn.contains(event.target);
+            if (!isClickInsidePicker && !isClickOnEmojiButton) {
+                hidePicker();
+            }
+        });
+
+        // 모바일 환경 터치시 숨김처리
+        window.addEventListener('touchmove', hidePicker, { passive: true });
+        window.addEventListener('touchstart', hidePicker, { passive: true });
+
+        // send button
+        function updateSendBtn(e) {
+            if (e.matches) {
+                sendButton.textContent = '⬆';
+            } else {
+                sendButton.textContent = 'send';
+            }
+        }
+        updateSendBtn(mediaQuery);
+        mediaQuery.addEventListener('change', updateSendBtn);
+
+
+        /*
+        *   채팅
+        */ 
+        chatBox.style.display = 'none';
+        enterBtn.style.display = 'block';
+
+        
+
+        // 서버에서 닉네임 초기화 이벤트 추가
+        socket.on('set-nickname', (nickname) => {
+            myNickname = nickname;
+            console.log(`[client] 현재 접속자: ${myNickname}`);
+        });
+
+
+        // session - expired
+        socket.on('session-expired', (data) => {
+            console.log('[client] SESSION EXPIRED: ', data.message);
+            // 세션 만료 시 UI 초기화
+            document.getElementById('chatBox').style.display = 'none';
+            document.getElementById('chatButtonContainer').style.display = 'flex';
+            document.getElementById('messages').innerHTML = '';
+
+            // window.location.href= 'chatPage.html';
+                // 100ms 딜레이 후 페이지 이동
+            setTimeout(() => {
+                window.location.replace('chatPage.html');
+            }, 100);
+
+        });
+
+       // message 구분하여 나타내기 
+        function appendMessages(message, messageType) {
+            const messageContainer = document.getElementById('messages');
+            const newMessage = document.createElement('div');
+            
+            newMessage.className = messageType === 'system' ? 'system-message'
+                                : messageType === 'sender' ? 'chat-message sender'
+                                                            : 'chat-message receiver';
+            newMessage.textContent = message;
+            messageContainer.appendChild(newMessage);
+            messageContainer.scrollTop = messageContainer.scrollHeight;
+
+            messageInput.value = ''; 
+        };
+
+        // send 메시지 
+        function sendMessage(){
+            const msg = messageInput.value.trim();
+            if (msg) {
+                socket.emit('chat-message', msg); // 서버에 메시지 전송
+                messageInput.value = '';
+            }
+        };
+
+        // 버튼 클릭 또는 Enter 키 입력 시 메시지 전송
+        function handleSend(event) {
+            if (event.type === 'click' || (event.type === 'keydown' && event.key === 'Enter')) {
+                event.preventDefault(); // 기본 동작 방지
+
+                if (isProcessing) return; // 중복 호출 방지
+                isProcessing = true;
+                sendMessage();
+
+                // 30ms 후 플래그 초기화 (중복 방지 타이머)
+                setTimeout(() => {
+                    messageInput.value = '';
+                    isProcessing = false;
+                }, 30);
+            }
+        }
+
+        // 대기중인 유저에게 시스템 메시지 전송 
+        socket.on ('wait-state', (data) => {
+            appendMessages(data.message , data.messageType);
+        });
+
+        // 채팅 준비 완료 시 상대방 닉네임 표시
+        socket.on('chat-ready', (data) => {
+            // 상대방 정보 표시
+            const partner = data.users.find(user => user.id !== socket.id);
+            roomId= data.roomId;
+            partnerNickname = partner.nickname;
+            partnerIP = partner.userIP;
+
+            const inputBox = document.getElementById('inputBox');
+            if (inputBox) {
+                inputBox.style.visibility = 'visible';
+                inputBox.style.display = 'flex'; // 입력창 활성화
+            }
+            
+            chatHeader.textContent = "connected with: " + partner.nickname;
+            // report 버튼 화면에 표시
+            const reportBtn = document.createElement('button');
+            reportBtn.id = 'reportBtn';
+            reportBtn.className = 'chat-header-btn';
+            reportBtn.type = 'button';
+            reportBtn.textContent = '🚨'; // 버튼 내용
+            reportBtn.onclick = openReportModal; // 클릭 시 신고 모달 열기
+            chatHeader.appendChild(reportBtn);  // 닉네임 옆에 버튼 추가
+
+            appendMessages(data.message, data.messageType);
+
+
+        });
+
+        socket.on('warning-message', (data) => {
+            appendMessages(data.message, data.messageType);
+        });
+
+        // 메시지 수신
+        socket.on('chat-message', (data) => {
+            const isSender = data.sender === myNickname; 
+            appendMessages(data.message, isSender ? 'sender' : 'receiver');
+        });
+
+        // 서버 연결 종료 처리
+        socket.on('chat-end', (data) => {
+            appendMessages(data.message, 'system'); // 시스템 메시지로 알림 표시
+            const chatHeader = document.getElementById('chatHeader');
+            if (chatHeader) {
+                chatHeader.textContent = ''; // 닉네임 제거
+                console.log('chatHeader content cleared.');
+            }
+
+            document.getElementById('inputBox').style.display='none'; // 입력창 비활성화
+        });
+
+        // 상대방의 요청으로 채팅 종료
+        socket.on('user-disconnect', (data) => {
+            appendMessages(data.message, 'system'); // 시스템 메시지로 알림 표시
+            
+            const chatHeader = document.getElementById('chatHeader');
+            if (chatHeader) {
+                chatHeader.textContent = ''; // 닉네임 제거
+                console.log('chatHeader content cleared.');
+            }
+            document.getElementById('inputBox').style.display='none'; // 입력창 비활성화
+
+        });
+        // 이벤트 리스너 추가
+        sendButton.addEventListener('click', handleSend);
+        messageInput.addEventListener('keydown', handleSend);
+
+        // 채팅 종료 버튼 클릭 시
+        document.getElementById('exitBtn').addEventListener('click', () => {
+            socket.emit('user-disconnect'); // 서버에 종료 요청
+            document.getElementById('chatBox').style.display = 'none'; // 채팅창 숨기기
+            document.getElementById('chatButtonContainer').style.display = 'flex'; // 초기 상태로 복구
+            document.getElementById('messages').innerHTML = '';
+       
+        });
+
+        // 재연결 버튼 클릭시 
+        document.getElementById('restartBtn').addEventListener('click', () => {
+            socket.emit('restart-connect'); // 서버에 재연결 요청
+            document.getElementById('inputBox').style.display='none'; 
+        });
+    });
+</script>
+</body>
+</html>

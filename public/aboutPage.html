@@ -1,0 +1,440 @@
+<!DOCTYPE html>
+<html lang="UTF-8">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>nulm. </title>
+    <link rel="stylesheet" href="css/common.css">
+    <link rel="stylesheet" href="css/fonts.css">
+    <style>
+        html, body {
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+        }
+
+        .about-header-container {
+            display: flex;
+            width: 100%;
+            height: 40vh;
+            background-color: black;
+            margin-top: -20px;
+        }
+
+        .header-section {
+            display: flex;
+            width: 100%;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+         }
+
+        .header-section h1 {
+            color: white;
+            font-family: 'DOSMyungjo';
+            font-size: 5rem;
+        }
+
+        .about-text-container {
+            width: 80%;
+            height: 500px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            /* background-color: black; */
+            margin: auto;
+            position: relative; 
+            top: 0;
+            left: 0;
+        }
+
+        .scrolling-container {
+            width: 100%;
+            height: 500px;
+            overflow: hidden;
+            position: relative;
+            background-color: #fdf6ed;
+            display: flex;
+            align-items: center;
+        }
+
+        /* 스크롤링 이미지 리스트 */
+        #scrollingImages {
+            display: flex;
+            position: relative;
+            white-space: nowrap; /* 가로 배치 */
+        }
+
+        .img-container {
+            position: relative;
+            display: inline-block;
+            width: 300px;
+            height: 350px;
+            margin-right: 100px;
+            overflow: hidden;
+            border-radius: 10px;
+            background-size: cover;
+            background-position: center;
+            transition: transform 0.3s ease, margin-top 1s ease;
+        }
+
+        /* 이미지 배경 및 텍스트 */
+        .image-with-text {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            background-size: cover;
+            background-position: center;
+            justify-content: flex-start;
+            align-items: flex-end;
+            top: -4%;
+            left: 5%;
+        }
+
+
+        .image-with-text p {
+            white-space: pre-line;
+            font-size: 20px;
+            color: white;
+            font-family: 'Cafe24Ohsquare';
+            text-shadow: 1px 1px 0px rgba(0, 0, 0, 0.5);
+            margin: 0;
+        }
+
+        /* 호버 효과 */
+        .img-container:hover {
+            transform: translateY(-10px);
+        }
+
+        .about-use-container {
+            display: flex;
+            width: 100%;
+            height: 40vh;
+            background-color: black;
+            margin-top: 100px;
+            margin-bottom: 100px;
+        }
+
+        .about-use-text-container {
+            display: flex;
+            flex-direction: column; /* 세로 정렬 */
+            width: 100%;
+            justify-content: center;
+            align-items: center;
+            box-sizing: border-box;
+        }
+
+        .row {
+            display: flex; 
+            justify-content: center; 
+            gap: 20px; 
+            margin-bottom: 20px; 
+            width: 90%;
+        }
+
+        .use-box {
+            display: flex;
+            flex-direction: column;
+            align-items: center; 
+            justify-content: flex-end;
+            background-color: white;
+            border-radius: 20px;
+            padding: 20px;
+            text-align: center;
+            width: 350px; /* 기본 크기 */
+            height: 150px;
+            transition: all 0.3s ease; /* 부드러운 크기 변경 효과 */
+        }
+
+
+
+        .use-box h2 {
+            font-family: 'DOSMyungjo';
+            font-size: 40px; /* 제목 크기 */
+            color: #e65729;
+            margin-bottom: 10px; /* 제목 아래 여백 */
+            white-space: pre-line;
+        }
+
+        .use-box p {
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+            font-size: 16px;
+            color: #333;
+            margin: 0 auto;
+        }
+
+        .join-container {
+            display: flex;
+            width: 100%;
+            height: 40vh;
+            background-color: black;
+            margin-top: 100px;
+        }
+
+        .footer {
+            margin-top: 0;
+        }
+
+        @media screen and (min-width: 391px) and (max-width: 844px) {
+            .header-section h1 {
+                font-size: 3rem; /* 폰트 크기 조정 */
+                line-height: 1.2; /* 텍스트 간격 */
+                word-break: break-word; /* 텍스트 줄바꿈 */
+                padding: 0 10px; /* 좌우 패딩 추가 */
+            }
+
+            .about-use-text-container {
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+            }
+
+            .row {
+                display: flex;
+                flex-direction: row;
+                justify-content: center;
+                gap: 10px;
+            }
+
+            .use-box {
+                width: calc(45% - 10px);
+                height: auto;
+                margin: 10px;
+            }
+
+
+            .footer {
+                margin-top: 0;
+            }
+
+        }
+    
+        @media screen and (max-width: 390px) {
+            .about-text-container {
+                height: 400px;
+            }
+            .scrolling-container {
+                height: 500px;
+                background-color: inherit;
+            }
+            .header-section h1 {
+                font-size: 2rem; /* 폰트 크기 조정 */
+                line-height: 1.3; /* 텍스트 간격 */
+                word-break: break-word; /* 텍스트 줄바꿈 */
+                padding: 0 15px; /* 좌우 패딩 추가 */
+            }
+            
+            .about-use-container {
+                margin-bottom: 50px;
+            }
+            
+            .row {
+                flex-direction: column; /* 세로 배치 */
+                align-items: center;
+            }
+
+            .use-box {
+                width: 80%;
+                margin: 0;
+                height: 130px;
+                padding: 10px;
+            }
+
+            .use-box h2 {
+                font-size: 30px;
+                margin: 0;
+                padding: 0;
+            }
+
+            .join-container {
+                height: 70vh;
+            }
+            .footer {
+                margin-top: 0;
+            }
+            
+        }
+
+    </style>
+
+</head>
+<body>
+    
+    <div id="main" style="overflow-x: hidden;">
+        <header class="nav-container" style="width: 100%;">
+            <div class="box nav-logo-container logo" >
+                <a href="index.html">Nulm.</a>
+            </div>
+            <nav class="box nav-menu-container nav">
+                <a href="index.html">HOME</a>
+                <a href="aboutPage.html">ABOUT</a>
+                <a href="chat.html">CHAT</a>
+                <!-- <a href="#">CONTACT</a> -->
+            </nav>
+            <div class="box nav-contact-container contact-button">
+                <button id="contactBtn">CONCTACT</button>
+            </div>
+            <div class="hamburger-menu" onclick="toggleMenu()">☰</div>
+        </header>
+
+         <!-- full screen navigation -->
+         <div class="full-screen-nav" id="fullScreenNav">
+            <div class="full-screen-nav-content">
+                <div class="logo"> nulm. </div>
+                <a href="index.html">HOME</a>
+                <a href="aboutPage.html">ABOUT</a>
+                <a href="chatPage.html">CHAT</a>
+                <a href="#">CONTACT</a>
+            </div>
+            <div class="full-screen-nav-close-btn" onclick="toggleMenu()">✖</div>
+        </div>
+
+        <!--about 영역-->
+        <div class="about-header-container">
+            <div class="header-section">
+                <h1>WHY BE A PART OF A NULM?</h1>
+            </div>
+        </div>
+
+        <div class="about-text-container">
+            <div class="scrolling-container">
+                <div id="scrollingImages">
+            
+                </div>
+            </div>
+        </div>
+
+        <div class="about-use-container">
+            <div class="header-section">
+                <h1>IT'S EASY TO USE</h1>
+            </div>
+        </div>
+        <div class="about-use-text-container">
+            <div class="row">
+                <div class="use-box">
+                    <h2>
+                        SIMPLE
+                        START
+                    </h2>
+                    <p>회원가입 없이</p>
+                    <p>그냥 널름 하세요</p>
+                </div>
+                <div class="use-box">
+                    <h2>
+                        REPORT 
+                       & REMATCH
+                    </h2>
+                    <p>불편한 상대는 신고하세요</p>
+                    <p>다른 사람과 매칭될 테니</p>
+                </div>
+            </div>
+            <div class="row">
+                <div class="use-box">
+                    <h2>
+                        ACCESS 
+                        ANYWHERE
+                    </h2>
+                    <p>어떠한 환경에서도</p>
+                    <p>편리한 사용 경험을 제공해요</p>
+                </div>
+                <div class="use-box">
+                    <h2>
+                        ONE-CLICK
+                        MATCH
+                    </h2>
+                    <p>JUST HIT ENTER</p>
+                    <p>그럼 널름이 시작돼요</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="join-container">
+            <div class="header-section">
+                <h1>WON'T YOU NULM?</h1>
+            </div>
+        </div>
+
+        <!-- footer 영역 -->
+        <footer class="footer">
+            <div class="footer-content">
+                <p>Nulm.</p>
+                <p>GASAN, GEUMCHEON, SEOUL, KOREA</p>
+                <p>YI JI YEONG</p>
+                <p>+82 10 5072 3383</p>
+                <p>KONGUNNI821@GMAIL.COM</p>
+            </div>
+        </footer>
+    </div>
+</body>
+<script>
+// hamburger menu
+function toggleMenu() {
+    const fullScreenNav = document.getElementById('fullScreenNav');
+    fullScreenNav.classList.toggle('open');
+}
+
+        const images = [
+            { src: 'images/1.jpeg', text: '예측할 수 없는 만남\n 널름이 시작해요' },
+            { src: 'images/about-time.gif', text: '시간이 순삭되는 대화의 즐거움\n 지금 바로 경험해요' },
+            { src: 'images/about-where.gif', text: '웹 브라우저만 있다면 \n 어디서든 언제든 연결돼요' },
+            { src: 'images/4.jpeg', text: '복잡한 절차는 없어요\n 널름으로 연결돼요' },
+        ];
+
+        // DOM에 이미지와 텍스트 추가
+        const scrollingImages = document.getElementById("scrollingImages");
+
+        images.forEach(({ src, text }) => {
+            const imgContainer = document.createElement("div");
+            imgContainer.className = "img-container";
+            imgContainer.style.backgroundImage = `url(${src})`;
+
+            const overlay = document.createElement("div");
+            overlay.className = "image-with-text";
+
+            const textElement = document.createElement("p");
+            textElement.textContent = text;
+
+            overlay.appendChild(textElement);
+            imgContainer.appendChild(overlay);
+            scrollingImages.appendChild(imgContainer);
+        });
+
+        // 이미지를 두 세트로 복제
+        images.forEach(({ src, text }) => {
+            const imgContainer = document.createElement("div");
+            imgContainer.className = "img-container";
+            imgContainer.style.backgroundImage = `url(${src})`;
+
+            const overlay = document.createElement("div");
+            overlay.className = "image-with-text";
+
+            const textElement = document.createElement("p");
+            textElement.textContent = text;
+
+            overlay.appendChild(textElement);
+            imgContainer.appendChild(overlay);
+            scrollingImages.appendChild(imgContainer);
+        });
+
+        // 무한 스크롤 애니메이션
+        let scrollPosition = 0;
+        const scrollSpeed = 1; // 스크롤 속도 (픽셀 단위)
+
+        function animateScroll() {
+            scrollPosition -= scrollSpeed;
+
+            // 스크롤 위치 업데이트
+            scrollingImages.style.transform = `translateX(${scrollPosition}px)`;
+
+            // 한 세트의 이미지를 완전히 넘기면 초기화
+            const totalWidth = scrollingImages.scrollWidth / 2;
+            if (Math.abs(scrollPosition) >= totalWidth) {
+                scrollPosition = 0; // 위치 초기화
+            }
+
+            requestAnimationFrame(animateScroll);
+        }
+
+        animateScroll();
+</script>
+</html>

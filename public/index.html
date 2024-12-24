@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="UTF-8">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>nulm. </title>
+    <link rel="stylesheet" href="css/common.css">
+    <link rel="stylesheet" href="css/index.css">
+    <link rel="stylesheet" href="css/fonts.css">
+</head>
+
+<body>
+    <!-- 첫 진입시 스플래쉬 화면 -->
+    <div id="splash-screen">
+        <div class="loading-text" id="loading-text">0%</div>
+    </div>
+
+    <div id="main" style="display: none;">
+        <header class="nav-container" style="width: 100%;">
+            <div class="box nav-logo-container logo">
+                <a href="index.html">Nulm.</a>
+            </div>
+            <nav class="box nav-menu-container nav">
+                <a href="index.html">HOME</a>
+                <a href="aboutPage.html">ABOUT</a>
+                <a href="chatPage.html">CHAT</a>
+                <!-- <a href="#">CONTACT</a> -->
+            </nav>
+            <div class="box nav-contact-container contact-button">
+                <button id="contactBtn">CONCTACT</button>
+            </div>
+            <div class="hamburger-menu" onclick="toggleMenu()">☰</div>
+        </header>
+
+        <!-- full screen navigation -->
+        <div class="full-screen-nav" id="fullScreenNav">
+            <div class="full-screen-nav-content">
+                <div class="logo"> Nulm. </div>
+                <a href="index.html">HOME</a>
+                <a href="aboutPage.html">ABOUT</a>
+                <a href="chatPage.html">CHAT</a>
+                <a href="#">CONTACT</a>
+            </div>
+            <div class="full-screen-nav-close-btn" onclick="toggleMenu()">✖</div>
+        </div>
+
+        <div class="b-box" id="mainIntro">
+            <div class="box box-1">
+                <h1 class="intro-text-primary outline-text" id="introTextPrimary">Nulm. </h1>
+                <h3 class="intro-text-secondary" id="introTextSecondary"> { null } more </h3>
+            </div>
+            <!-- <div class="box box-2">2번째 칸 (직사각형)</div> -->
+            <div class="box box-2">
+                <a class="link_img" href="https://www.instagram.com" style="margin-top: 250px;">
+                    <img id="icon_insta" src="/images/icon_insta.png" alt="">
+                </a>
+                <a class="link_img" href="https://www.youtube.com">
+                    <img id="icon_youtube" src="/images/icon_youtube.png" alt="">
+                </a>
+            </div>
+            <div class="box box-3"> </div>
+        </div>
+
+        <div class="about-container">
+            <div class="about-section">
+                <div class="about-text">
+                    아무 말도
+                    널름이 채울게요.
+                </div>
+            </div>
+        
+            <div class="reviews-container">
+                <div class="reviews" id="reviews">
+                    <div class="review">
+                        <div class="review-img">
+                            <img src="images/review1.png" alt="User">
+                        </div>
+                        <span>“익명이라 처음엔 어색했지만, 
+                            생각보다 진솔한 대화를 나눌 수 있었어요!”
+                        </span>
+                    </div>
+                    <div class="review">
+                        <div class="review-img" >
+                            <img src="images/review2.png" alt="User">
+                        </div>
+                        <span>“심심해서 시작했는데, 
+                            뜻밖의 친구를 만났습니다.”
+                        </span>
+                    </div>
+                    <div class="review">
+                        <div class="review-img">
+                            <img src="images/review4.png" alt="User">
+                        </div>
+                        <span>“비어있는 가능성을 채운다라.
+                              낭만적이잖아요.”
+                        </span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- go to chat page -->
+        <div class="chat-entry-container">
+            <div class="chat-entry-section">
+                <button id="chatEnterBtn" onClick="goToChatPage()">let's nulm!</button>
+            </div>
+        </div>
+        <!-- footer 영역 -->
+        <footer class="footer">
+            <div class="footer-content">
+                <p>Nulm.</p>
+                <p>GASAN, GEUMCHEON, SEOUL, KOREA</p>
+                <p>YI JI YEONG</p>
+                <p>+82 10 5072 3383</p>
+                <p>KONGUNNI821@GMAIL.COM</p>
+            </div>
+        </footer>
+    </div>
+<script>
+// hamburger menu
+function toggleMenu() {
+    const fullScreenNav = document.getElementById('fullScreenNav');
+    fullScreenNav.classList.toggle('open');
+}
+
+// chat enter Btn
+function goToChatPage() {
+    window.location.href='chatPage.html';
+}
+
+    // 1. 스플래시 화면 처리
+window.addEventListener('load', function () {
+    if (window.location.pathname.includes('index.html') || window.location.pathname === '/') {
+        // 스플래시 화면과 스크롤 방지
+        document.documentElement.style.overflow = 'hidden';
+        document.body.style.overflow = 'hidden';
+
+        let count = 0;
+        const loadingText = document.getElementById('loading-text');
+
+        const number = setInterval(function () {
+            if (count <= 100) {
+                loadingText.textContent = `${count}%`;
+                count++;
+            } else {
+                clearInterval(number);
+                console.log("Loading complete, switching to index page.");
+
+                // 스플래시 화면 숨기고 메인 페이지 표시
+                document.getElementById('splash-screen').style.display = 'none';
+                document.getElementById('main').style.display = 'block';
+
+                // b-box에 visible 클래스 추가 (애니메이션 실행)
+                setTimeout(() => {
+                    document.querySelector('.b-box').classList.add('visible');
+                }, 500);
+
+                // 스크롤 복구
+                document.body.style.overflow = 'auto';
+                document.documentElement.style.overflow = 'auto';
+
+                // **Intersection Observer로 about-section 감시 시작**
+                initIntersectionObserver();
+            }
+        }, 10);
+    }
+});
+
+// 2. Intersection Observer로 about-section 감시
+function initIntersectionObserver() {
+    const aboutSection = document.querySelector('.about-section');
+
+    // Intersection Observer 옵션
+    const observerOptions = {
+        root: null, // 뷰포트 기준
+        rootMargin: "0px", // 여백 설정 (필요에 따라 조정)
+        threshold: 0.3 // 요소가 30% 이상 보일 때 실행
+    };
+
+    // Observer 생성
+    const observer = new IntersectionObserver((entries, observer) => {
+        entries.forEach(entry => {
+            if (entry.isIntersecting) { // 요소가 화면에 보일 때
+                aboutSection.classList.add('visible');
+                console.log("visible class added via IntersectionObserver");
+                observer.unobserve(entry.target); // 더 이상 감시하지 않음
+            }
+        });
+    }, observerOptions);
+
+    // 감시 시작
+    observer.observe(aboutSection);
+}
+
+// 3. 리뷰 컨테이너 애니메이션 처리
+const reviewsContainer = document.getElementById('reviews');
+const reviews = document.querySelectorAll('.review');
+let currentIndex = 0;
+
+function showNextReview() {
+    reviews.forEach((review, index) => {
+        review.style.display = index === currentIndex ? 'flex' : 'none';
+    });
+
+    currentIndex = (currentIndex + 1) % reviews.length;
+}
+
+showNextReview();
+setInterval(showNextReview, 2500);
+
+</script>
+</body>
+</html>

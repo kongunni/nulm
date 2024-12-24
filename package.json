@@ -1,8 +1,11 @@
 {
   "name": "chatprj0",
   "version": "1.0.0",
-  "main": "index.js",
+  "type": "module",
+  "main": "server.js",
   "scripts": {
+    "start": "node server/server.js",
+    "dev": "nodemon server/server.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
@@ -10,11 +13,16 @@
   "license": "ISC",
   "description": "",
   "dependencies": {
+    "axios": "^1.7.9",
     "ejs": "^3.1.10",
     "express": "^4.21.1",
+    "fs-extra": "^11.2.0",
+    "ioredis": "^5.4.1",
+    "moment-timezone": "^0.5.46",
     "socket.io": "^4.8.1"
   },
   "devDependencies": {
+    "moment-timezone": "^0.x.x",
     "nodemon": "^3.1.7"
   }
 }
