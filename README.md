@@ -16,9 +16,9 @@
 
 
 # 설치 전 준비 사항
-Node.js
-npm
-Redis
+- Node.js
+- npm
+- Redis
 
 
 # 서버 실행
