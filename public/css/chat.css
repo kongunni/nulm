@@ -257,26 +257,22 @@
             align-items: center;
             text-align: center;
             gap: 10px;
+            color: #ff6b3b;
+            font-size: 15px;
         }
 
         #reportSubmitBtn {
-            background-color: #e65729;
-            width: 50px;
-            height: 20px;
+            background-color: #000000;
+            width: 55px;
+            height: 30px;
             border-radius: 5px;
-            font-size: 14px;
-            color: #4a4a4a;
-            font-family: 'DOSMyungjo';
         }
 
         #reportCancelBtn {
-            background-color: #4a4a4a;
-            width: 50px;
-            height: 20px;
+            background-color: #777777;
+            width: 55px;
+            height: 30px;
             border-radius: 5px;
-            font-size: 14px;
-            color: #4a4a4a;
-            font-family: 'DOSMyungjo';
         }
 
         /* 반응형 */

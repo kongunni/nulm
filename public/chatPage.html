@@ -50,7 +50,6 @@
                 <div class="chat-box" id="chatBox" style="display: none;">
                     <div class="chat-header-container">
                         <div class="chat-header" id="chatHeader"></div>
-                        <!-- <button id="reportBtn" class="chat-header-btn" type="button" onclick="openReportModal()">🚨</button> -->
                         <div class="chat-btn">
                             <button id="restartBtn" class="chat-header-btn" type="button">↻</button>
                             <button id="exitBtn" class="chat-header-btn" type="button"> ✖ </button>
@@ -69,8 +68,8 @@
                                 <label><input type="checkbox" name="reason" value="금전요구">금전요구</label>
                                 <label><input type="checkbox" name="reason" value="기타">기타</label>
                                 <div class="reportBtn">
-                                    <button id="reportSubmitBtn" class="report-form-btn" type="button" onclick="submitReport()">신고</button>
-                                    <button id="reportCancelBtn" class="report-form-btn" type="button" onclick="closeReportModal()">취소</button>
+                                    <button id="reportSubmitBtn" class="report-form-btn" type="button" onclick="submitReport()">report</button>
+                                    <button id="reportCancelBtn" class="report-form-btn" type="button" onclick="closeReportModal()">cancel</button>
                                 </div>
                             </form>
                         </div>
@@ -125,6 +124,19 @@
         const fullScreenNav = document.getElementById('fullScreenNav');
         fullScreenNav.classList.toggle('open');
     }
+
+    // modal reset
+    function resetReportModal() {
+        const reportForm = document.getElementById('reportForm');
+        if (reportForm) {
+            const checkboxes = reportForm.querySelectorAll('input[type="checkbox"]');
+            checkboxes.forEach(checkbox => {
+                checkbox.checked = false;
+            });
+        }
+    }
+
+
     // modal open
     function openReportModal() {
         const reportModal  = document.getElementById('reportModal');
@@ -135,7 +147,9 @@
     function closeReportModal() {
         const reportModal  = document.getElementById('reportModal');
         reportModal.style.display ='none';
+        resetReportModal();
     }
+
 
     //report submit
      function submitReport() {
@@ -161,7 +175,8 @@
                     reasons,
                     roomId,
                     partnerNickname,
-                    partnerIP
+                    partnerIP // reported: 신고대상
+                    // reporterId: socket.id //신고자 socketId
                 })
             })
             .then(response => {
@@ -180,6 +195,9 @@
             .catch(err => {
                 console.error('Error reporting user:', err);
                 alert('신고 처리 중 오류가 발생했습니다.');
+            })
+            .finally(()=>{
+                resetReportModal();
             });
         }
 
