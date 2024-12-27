@@ -3,7 +3,8 @@ import path from 'path';
 import moment from 'moment-timezone';
 
 // 저장 경로를 로컬의 경로로 설정
-const BASE_LOG_DIR = path.join('/Users/yijiyeong/Documents/nulm');
+// const BASE_LOG_DIR = path.join('/Users/yijiyeong/Documents/nulm');
+const BASE_LOG_DIR = path.join('/home/ec2-user/nulm-logs');
 
 // 특수 문자 처리 함수
 const sanitizeFileName = (roomId) => {

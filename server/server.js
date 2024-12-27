@@ -17,7 +17,7 @@ const io = new Server(server);
 // 채팅 로깅
 import axios from 'axios'; 
 import fs from 'fs-extra';
-import { saveChatLog } from '../utils/chatLogger.js';
+import { saveChatLog } from '../utils/chatLogger.js';
 const LOGGER_SERVER_URL = 'http://localhost:4000/log'; // 로깅 서버 URL
 
 // 정적 파일 경로 추가
@@ -34,18 +34,18 @@ app.use(express.static(path.join(__dirname, '../public')));
 app.use(express.json()); // JSON 데이터 파싱을 위한 미들웨어
 
 // Redis 연동 테스트
-app.get('/test', async (req, res) => {
-    try {
-        // Redis에 데이터 저장
-        await redisClient.set('testKey', 'testValue');
-        const value = await redisClient.get('testKey');
+// app.get('/test', async (req, res) => {
+//     try {
+//         // Redis에 데이터 저장
+//         await redisClient.set('testKey', 'testValue');
+//         const value = await redisClient.get('testKey');
 
-        res.send({ success: true, value }); // Redis에서 가져온 값 반환
-    } catch (err) {
-        console.error('Redis error:', err);
-        res.status(500).send({ success: false, error: err.message });
-    }
-});
+//         res.send({ success: true, value }); // Redis에서 가져온 값 반환
+//     } catch (err) {
+//         console.error('Redis error:', err);
+//         res.status(500).send({ success: false, error: err.message });
+//     }
+// });
 
 /*
  * 신고 처리 API: 클라이언트가 신고 데이터를 전송하면 이를 처리
