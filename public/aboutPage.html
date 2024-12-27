@@ -218,9 +218,9 @@
                 background-color: inherit;
             }
 
-            .scrolling-container.animate-up {
-                transform: translateY(-50px); /* 위로 이동 */
-                transition: transform 0.5s ease-in-out; /* 부드러운 애니메이션 */
+            .img-container.clicked {
+                transform: translateY(-20px); 
+                 transition: transform 0.5s ease, margin-top 1s ease;
             }
 
             .header-section h1 {
@@ -442,14 +442,18 @@ function toggleMenu() {
         }
 
         animateScroll();
-        // 클릭 시 위로 이동 애니메이션
-        const scrollingContainer = document.querySelector('.scrolling-container');
+        
 
-        scrollingContainer.addEventListener('click', () => {
-            scrollingContainer.classList.add('animate-up');
-            setTimeout(() => {
-                scrollingContainer.classList.remove('animate-up');
-            }, 500); // 0.5초 후 원래 위치로 복귀
+        // 이미지 클릭 시 효과 추가
+        document.querySelectorAll('.img-container').forEach(img => {
+            img.addEventListener('click', () => {
+                img.classList.add('clicked');
+                setTimeout(() => {
+                    img.classList.remove('clicked');
+                }, 500); // transition 시간과 동일
+            });
         });
+
+
 </script>
 </html>
