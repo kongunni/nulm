@@ -154,12 +154,12 @@ async function handleReport(roomId, reporterSocket, reportedSocket, reasons) {
         });
 
         const isBanned = reportCount >= MAX_REPORT;
-        if (isBanned) {
-            //  console.log(`[server] 신고된 사용자 차단 처리 - IP: ${reportedIP}, 신고 수: ${reportCount}`);
+
+        if (isBanned) { //리포트 수 넘은 사용자 연결종료
             reportedSocket.disconnect();
+            //  console.log(`[server] 신고된 사용자 차단 처리 - IP: ${reportedIP}, 신고 수: ${reportCount}`);
         } else {
-            // 신고대상
-            reportedSocket.emit('chat-end', {
+            reportedSocket.emit('chat-end', { // 신고대상
                 message: '상대방이 채팅을 종료하였습니다.',
                 messageType: 'system',
             });
@@ -177,23 +177,26 @@ async function handleReport(roomId, reporterSocket, reportedSocket, reasons) {
                 message: '잠시만 기다려 주세요. \n 새로운 유저를 찾고 있습니다.',
                 messageType: 'system',
             });
+            addToWaitingUsers(reporterSocket);
 
             if (!isBanned) {
                 reportedSocket.emit('wait-state', {
                     message: '잠시만 기다려 주세요. \n 새로운 유저를 찾고 있습니다.',
                     messageType: 'system',
                 });
-            }
-        }, 2000);
-
-        setTimeout(() => {
-            addToWaitingUsers(reporterSocket);
-
-            if (!isBanned) {
                 addToWaitingUsers(reportedSocket);
             }
             matchUsers();
         }, 5000);
+
+        // setTimeout(() => {
+        //     addToWaitingUsers(reporterSocket);
+
+        //     if (!isBanned) {
+        //         addToWaitingUsers(reportedSocket);
+        //     }
+        //     matchUsers();
+        // }, 5000);
     } catch (error) {
         console.error(`[server] 신고 처리 중 오류 발생: ${error.message}`);
     }
