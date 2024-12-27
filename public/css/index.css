@@ -11,6 +11,10 @@
     font-style: normal;
 } */
 
+body, html {
+    overflow-x: hidden;
+}
+
 /* 스플래쉬 영역 */
 #splash-screen {
     display: flex;
@@ -63,24 +67,18 @@
     transform: translateY(0);
 }
 
-.box {
-    padding: 40px;
-    box-sizing: border-box;
-    text-align: center;
-    justify-content: center;
-    
-}
-
 .box-1 {
     display: flex;
     flex-direction: column;
     grid-column: 1 / 2;  /* 첫 번째 열 */
     grid-row: 1 / 2;     /* 첫 번째 줄 */
     border-bottom: 2px solid #e65729;
+    align-items: center;
+    justify-content: center;
+    padding: 0 20px !important;
 }
 
 /* text animate */
-
 .intro-text-primary {
     opacity: 0;
     transform: translateX(-100%);
@@ -128,7 +126,7 @@
     flex-direction: column;
     flex-wrap: nowrap;
     justify-content: flex-end;
-    align-items: center;
+    align-items: flex-end;
 }
 
 .link_img {
@@ -138,15 +136,7 @@
 #icon_insta, #icon_youtube {
     width: 3rem;
 }
-/* #icon_insta{
-    width: 40px;
-    margin-bottom: 20px;
-}
 
-#icon_youtube {
-    width: 40px;
-    margin-bottom: 100px;
-} */
 
 .box-3 {
     grid-column: 1 / 2;  /* 첫 번째 열 */
@@ -213,9 +203,9 @@
     text-align: center;
     align-items: flex-start;
     margin: 20px 0;
-    max-width: 90%;
-    min-width: 50rem;
-    width: 50rem;
+    /* max-width: 90%;
+    min-width: 50rem; */
+    width: 30rem;
     padding: 15px;
     background: #f9f9f9;
     border-radius: 15px;
@@ -295,15 +285,11 @@
 }
 
 
-@media screen and (min-width: 391px) and (max-width: 844px) {
-    .nav-container {
+@media screen and (max-width: 844px) {
+    /* .nav-container {
         border-bottom: 2px solid #e65729;
         background-color: #fdf6ed;
-    }
-    .hamburger-menu {
-        display: block;
-    }
-
+    } */
     /*intro-text*/
     .intro-text-primary {
         font-size: 80px;
@@ -313,17 +299,17 @@
         font-size: 24px;
     }
 
-    .box-2 {
+    /* .box-2 {
         justify-content: center !important;
         align-items: flex-start;
         display: flex;
         padding-left: 10px !important;
-    }
+    } */
 
     /* box-2의 그리드 */
-   .link_img{
+   /* .link_img{
          margin-left: 0;
-   }
+   } */
 
     #icon_insta, #icon_youtube {
         width: 35px;
@@ -345,16 +331,21 @@
     .review {
         font-size: 0.9rem;
         padding: 10px;
-        width: 30rem;
-        min-width: 350px;
+        width: 20rem;
         margin: 15px 0;
+    }
+
+    #chatEnterBtn {
+        font-size: 1.0rem;
+        width: 8rem;
+        height: 8vh;
     }
 }
 
 /* iphone */
-@media (max-width: 390px) {
+@media (max-width: 430px) {
     .intro-text-primary {
-        font-size: 80px;
+        font-size: 4.5rem;
     }
 
     .intro-text-secondary {
@@ -390,10 +381,17 @@
     }
 
     #chatEnterBtn{
+        font-size: 1rem;
+        white-space: nowrap;
+        letter-spacing: -1px;
         height: 7vh;
     }
-
-    
 }
+
+@media (max-width: 350px) {
+    #icon_insta, #icon_youtube {
+        width: 25px;
+    }
+} 
 
 /* 만약 다시 스크롤 핸들 안먹히면 각 규격마다 opacity 추가하기*/

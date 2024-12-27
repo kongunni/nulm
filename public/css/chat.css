@@ -1,15 +1,4 @@
-    /* @font-face {
-        font-family: 'Ycomputer-Regular';
-        src: url('https://fastly.jsdelivr.net/gh/projectnoonnu/noonfonts_11-01@1.0/Ycomputer-Regular.woff2') format('woff2');
-        font-weight: normal;
-        font-style: normal;
-    } */
-
-
-    html, body {
-        font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
-    }
-        /* button 기본 속성 제거*/
+       /* button 기본 속성 제거*/
         button {
             all: unset; /* 모든 기본 스타일 제거 */
             display: inline-block; /* 버튼 크기와 배치를 조정하기 위해 추가 */
@@ -90,9 +79,10 @@
         .chat-btn {
             display: flex;
             width: 5%;
-            gap: 5px;
+            gap: 15px;
             float: right;
             margin:  0 10px auto;
+            padding: 0 20px;
         }
 
         .chat-framer{
@@ -109,10 +99,12 @@
             display: flex;
             justify-content: center;
             align-items: center;
+            text-align: center;
             margin: 0;
             padding: 0;
             width: 95%;
-            height: 7vh;
+            max-width: 450px;
+            height: 10vh;
             padding-bottom: 15px;
             box-sizing: border-box;
             z-index: 1000;
@@ -127,16 +119,6 @@
             color: #e65729;
             font-size: 14px;
         }
-
-/*
-        @keyframes scrollLeft {
-            from {
-                transform: translateX(100%); 
-            }
-            to {
-                transform: translateX(-100%); 
-            }
-        } */
 
         /* 메시지 처리 */
         #messages {
@@ -218,6 +200,10 @@
             border: none;
         }
 
+        .input-msg:focus {
+            outline: 2px solid rgb(236 80 30);
+        }
+
         #emoji-btn {
             background: none;
         }
@@ -238,17 +224,20 @@
             display: flex;
             width: 350px;
             justify-content: center;
-            background-color: #ece5dd;
+            background-color: #ffecc1;
             border-radius: 20px;
             padding: 10px 0;
+            margin-bottom: 10px;
         }
+
         #reportForm{
             display: flex;
             flex-direction: column;
             justify-content: center;
-            align-items: flex-start;
+            align-items: center;
             gap: 10px;
             color: #4a4a4a;
+            white-space: pre;
         }
 
         .reportBtn {
@@ -257,30 +246,29 @@
             align-items: center;
             text-align: center;
             gap: 10px;
-            color: #ff6b3b;
-            font-size: 15px;
+            color: white;
+            font-size: 10px;
         }
 
         #reportSubmitBtn {
-            background-color: #000000;
-            width: 55px;
-            height: 30px;
+            background-color: #e65729;
+            width: 50px;
+            height: 25px;
             border-radius: 5px;
         }
 
         #reportCancelBtn {
-            background-color: #777777;
-            width: 55px;
-            height: 30px;
+            background-color: #404040;
+            width: 50px;
+            height: 25px;
             border-radius: 5px;
         }
 
         /* 반응형 */
-        @media screen and (min-width: 391px) and (max-width: 844px) {
+        @media screen and (max-width: 844px) {
              /* chat-container */
              .chat-box {
-                width: 450px;
-                overflow-x: hidden;
+                width: 400px;
             }
 
             .chat-framer{
@@ -309,8 +297,8 @@
                 gap: 15px;
             }
 
-            .input-box #message{
-                width: 300px;
+            .input-msg{
+                width: 280px;
                 height: 5vh;
             }
 
@@ -318,18 +306,11 @@
         }
 
         /* 모바일 */
-        @media screen and (max-width: 390px) {
-            .hamburger-menu {
-                display: flex;
-                justify-content: flex-end;
-                width: 100%;
-                background-color: #fdf6ed;
-                /* background-color: #fff0b8; */
-                margin-right: -20px;
-            }
+        @media screen and (max-width: 430px) {
+           
 
             .enter-section #coverImg {
-                width: 350px;
+                width: 300px;
             }
 
             #enterBtn {
@@ -338,8 +319,10 @@
             
             /* chat-container */
             .chat-box {
-                width: 350px;
-                height: 500px;
+                justify-content: center;
+                align-items: center;
+                width: 320px;
+                height: 480px;
                 overflow-x: hidden;
             }
 
@@ -352,18 +335,27 @@
 
             .chat-notification-container {
                 display: flex;
-                justify-content: center;
-                align-items: center;
                 margin: 0;
                 padding: 0;
                 width: 95%;
-                height: 7vh;
+                height: 10vh;
                 padding-bottom: 15px;
             }
 
             .scrolling-text {
                 white-space: pre-line;
-                font-size: 14px;
+                font-size: 13px;
+            }
+
+            .report-container {
+                width: 90%;
+            }
+
+            #reportForm {
+                gap: 0;
+                white-space: pre;
+                font-size: 12px;
+                
             }
 
 
@@ -376,28 +368,28 @@
 
             .input-box {
                 /* display: flex; */
+                width: 100%;
                 flex-direction: row;
                 align-items: center;
-                justify-content: center;
+                /* justify-content: center; */
+                justify-content: space-between;
                 margin: 0 10px;
                 gap: 10px;
+
             }
 
             .input-msg {
-                width: 250px;
+                flex: 1; /*모바일 크기 자동 조절*/
+                width: 200px;
                 height: 30px;
                 border-radius: 20px;
                 padding-left: 10px; 
                 padding-right: 10px;
                 font-size: 14px;
                 border: none;
+                z-index: 1000;
             }
 
-            /* em-emoji-picker {
-                left: 14px !important;
-            } */
-
-         
             #emoji-btn {
                 background: none;
                 height: 20px;
@@ -408,8 +400,7 @@
             }
 
             #send {
-                background-color: #4a4a4a;
-                color: white;
+                /* background-color: #4a4a4a; */
                 width: 20px;
                 height: 20px;
                 border-radius: 7px;

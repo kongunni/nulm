@@ -63,10 +63,10 @@
                         </div>
                         <div id="modal-section">
                             <form id="reportForm">
-                                <label><input type="checkbox" name="reason" value="스팸">스팸</label>
-                                <label><input type="checkbox" name="reason" value="비속어">비속어</label>
+                                <label><input type="checkbox" name="reason" value="스팸">스     팸</label>
+                                <label><input type="checkbox" name="reason" value="비속어">비 속 어</label>
                                 <label><input type="checkbox" name="reason" value="금전요구">금전요구</label>
-                                <label><input type="checkbox" name="reason" value="기타">기타</label>
+                                <label><input type="checkbox" name="reason" value="기타">기     타</label>
                                 <div class="reportBtn">
                                     <button id="reportSubmitBtn" class="report-form-btn" type="button" onclick="submitReport()">report</button>
                                     <button id="reportCancelBtn" class="report-form-btn" type="button" onclick="closeReportModal()">cancel</button>
@@ -85,7 +85,6 @@
                         </div>
                         <div class="chat-message" id="messages"></div>
                         <div class="input-container">
-                            <!-- <div id="inputBox" class="input-box" style="display: none;"> -->
                             <div id="inputBox" class="input-box">
                                 <input id="message" class="input-msg" type="text"  autocomplete="off">
                                 <button id="emoji-btn">
@@ -213,7 +212,7 @@
         const enterBtn = document.getElementById('enterBtn');
         const chatHeader = document.getElementById('chatHeader');
         const sendButton = document.getElementById('send');
-        const mediaQuery = window.matchMedia('(max-width: 390px)'); //모바일규격
+        const mediaQuery = window.matchMedia('(max-width: 430px)'); //모바일규격
         const messages = document.getElementById('messages');
         const messageInput = document.getElementById('message');
         const inputBox = document.getElementById('inputBox');
@@ -258,13 +257,14 @@
         * emoji 
         */
         const emojiBtn = document.getElementById('emoji-btn');
+        const inputElement = document.getElementById('message');
 
         const pickerOptions = {
             onEmojiSelect: (emoji) => {
-                const input = document.getElementById('message'); 
-                if(input) {
-                    input.value += emoji.native;
-                    console.log('Emoji added:', messageInput.value);
+                //const input = document.getElementById('message'); 
+                if(inputElement) {
+                    inputElement.value += emoji.native;
+                    inputElement.focus();
                 } else {
                     console.error('<input> not found');
                 }
@@ -278,6 +278,7 @@
         picker.style.maxHeight = '300px';
         picker.style.overflowX = 'hidden';
         picker.style.overflowY = 'auto';
+        picker.style.zIndex = '9999';
         document.body.appendChild(picker);
 
         // Picker 위치 업데이트
@@ -294,9 +295,18 @@
                 picker.style.display = 'none';
             }
         }
+        
+        function togglePicker() {
+            if (picker.style.display === 'none' || picker.style.display === '') {
+                picker.style.display = 'block';
+                updatePickerPosition();
+            } else {
+                hidePicker();
+            }
+        }
 
         // 이모지 클릭시 클릭위치에 오게 처리
-        emojiBtn.addEventListener('click', (event) => {
+       emojiBtn.addEventListener('click', (event) => {
             if (picker.style.display === 'none' || picker.style.display === '') {
                 picker.style.display = 'block';
                 updatePickerPosition();
@@ -304,8 +314,13 @@
                 hidePicker();
             }
         });
+        //emojiBtn.addEventListener('click', togglePicker);
+        emojiBtn.addEventListener('touchstart', (evnet) => {
+            event.preventDefault();
+            togglePicker();
+        }, { passive: false });
 
-
+        
         // 다른 영역 클릭시 숨김 처리
         document.addEventListener('click', (event) => {
             const isClickInsidePicker = picker.contains(event.target);
@@ -315,14 +330,15 @@
             }
         });
 
-        // 모바일 환경 터치시 숨김처리
-        window.addEventListener('touchmove', hidePicker, { passive: true });
-        window.addEventListener('touchstart', hidePicker, { passive: true });
+        picker.addEventListener('click', (evnet) => {
+            evnet.stopPropagation();
+            console.log(`Selected emoji: ${emoji.native}`);
+        });
 
         // send button
         function updateSendBtn(e) {
             if (e.matches) {
-                sendButton.textContent = '⬆';
+                sendButton.innerHTML = '<img src="images/sendBtn.png">';       
             } else {
                 sendButton.textContent = 'send';
             }
