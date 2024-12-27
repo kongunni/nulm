@@ -66,7 +66,7 @@
                                 <label><input type="checkbox" name="reason" value="스팸">스     팸</label>
                                 <label><input type="checkbox" name="reason" value="비속어">비 속 어</label>
                                 <label><input type="checkbox" name="reason" value="금전요구">금전요구</label>
-                                <label><input type="checkbox" name="reason" value="기타">기     타</label>
+                                <label><input type="checkbox" name="reason" value="기타" >기     타</label>
                                 <div class="reportBtn">
                                     <button id="reportSubmitBtn" class="report-form-btn" type="button" onclick="submitReport()">report</button>
                                     <button id="reportCancelBtn" class="report-form-btn" type="button" onclick="closeReportModal()">cancel</button>
@@ -124,11 +124,12 @@
         fullScreenNav.classList.toggle('open');
     }
 
+
     // modal reset
     function resetReportModal() {
         const reportForm = document.getElementById('reportForm');
         if (reportForm) {
-            const checkboxes = reportForm.querySelectorAll('input[type="checkbox"]');
+            const checkboxes = reportForm.querySelectorAll('input[name="reason"]');
             checkboxes.forEach(checkbox => {
                 checkbox.checked = false;
             });
