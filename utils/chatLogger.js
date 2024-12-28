@@ -9,7 +9,7 @@ const BASE_LOG_DIR = path.join('/home/ec2-user/nulm-logs');
 // 특수 문자 처리 함수
 const sanitizeFileName = (roomId) => {
   const sanitized = roomId.replace(/[^a-zA-Z0-9-_]/g, '_');
-  // console.log(`[Logger] Sanitized roomId: ${sanitized}`); // 디버깅용
+  console.log(`[Logger] Sanitized roomId: ${sanitized}`); // 디버깅용
   return sanitized;
 };
 
@@ -23,7 +23,7 @@ const getLogFilePath = (roomId) => {
     const fileName = `${sanitizedRoomId}.txt`; // 파일 이름 생성
     // 파일 경로 생성
     const filePath = path.join(BASE_LOG_DIR, year, month, day, fileName);
-    // console.log(`[Logger] Generated file path: ${filePath}`); // 디버깅용 경로 출력
+    console.log(`[Logger] Generated file path: ${filePath}`); // 디버깅용 경로 출력
     return filePath;
   };
   
@@ -32,19 +32,25 @@ const getLogFilePath = (roomId) => {
 const formatLogMessage = ({ nickname, userIP, message, timestamp }) => {
   const formattedTimestamp = moment(timestamp).tz("Asia/Seoul").format("YY-MM-DD HH:mm:ss");
   const logMessage = `${nickname}[IP: ${userIP}]: ${message} -${formattedTimestamp}\n`;
-  // console.log(`[Logger] Formatted log message: ${logMessage.trim()}`); // 디버깅용
+  console.log(`[Logger] Formatted log message: ${logMessage.trim()}`); // 디버깅용
   return logMessage;
 };
 
 // 메시지 저장 함수
 export const saveChatLog = async (roomId, logData) => {
+  // 디버깅용으로 logData 확인
+  console.log(`[Logger] saveChatLog 호출됨 - roomId: ${roomId}`);
+  console.log(`[Logger] logData 내용: ${JSON.stringify(logData, null, 2)}`);
+
+  
   const filePath = getLogFilePath(roomId);
   const logMessage = formatLogMessage(logData);
+  console.log(`[Logger] 파일 경로: ${filePath}`); // 디버깅용
+  console.log(`[Logger] 파일 경로: ${logMessage}`); // 디버깅용
   try {
     await fs.ensureFile(filePath); // 경로가 없으면 생성
-    // console.log(`[Logger] Ensured file exists: ${filePath}`); // 디버깅용
     await fs.appendFile(filePath, logMessage); // 로그 추가
-    // console.log(`[Logger] Log saved: ${logMessage.trim()}`);
+    console.log(`[Logger] Log saved: ${filePath}, ${logMessage.trim()}`);
   } catch (error) {
     console.error(`[Logger] Error saving log for room "${roomId}" at "${filePath}": ${error.message}`);
   }

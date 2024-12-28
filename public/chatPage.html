@@ -391,7 +391,10 @@
             messageContainer.appendChild(newMessage);
             messageContainer.scrollTop = messageContainer.scrollHeight;
 
-            messageInput.value = ''; 
+            if (messageType === 'sender') {
+                messageInput.value = '';
+            }
+            //messageInput.value = ''; 
         };
 
         // send 메시지 

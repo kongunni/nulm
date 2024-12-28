@@ -379,6 +379,7 @@ io.on('connection', async (socket) => {
         if (chatRoom) {
             chatRoom.room.users.forEach(user => {
                 const messageType = user.id === socket.id ? 'sender' : 'receiver';
+               
                 user.socket.emit('chat-message', {
                     sender: socket.nickname,
                     message: msg,
