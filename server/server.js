@@ -494,8 +494,9 @@ io.on('connection', async (socket) => {
 
     // 세션 처리 - 백그라운드와 서버 만료
     socket.on('session-action', (action) => {
+
         if (action === 'reset') {
-            console.log(`[server] ${socket.nickname}[${socket.userIP}] session reset.`);
+            // console.log(`[server] ${socket.nickname}[${socket.userIP}] session reset.`);
             resetSessionTimeout(socket.id);
         } else if (action === 'background') {
             console.log(`[server] ${socket.nickname}[${socket.userIP}]is now in the background.`);
@@ -507,20 +508,54 @@ io.on('connection', async (socket) => {
                 handleExpiredSession(socket); // 세션 만료시 처리
             }, SESSION_DURATION);
             userSessions.set(socket.id, { timeout });
+
+            // 모바일 세션 관리
+            if (isMoblie(socket)) {
+                console.log(`[server] mobile session for ${socket.id}`);
+                resetSessionTimeout(socket.id);
+            }
+
+
         }
     });
 
     // 연결 종료 (시스템/네트워크 종료시) 
-    socket.on('disconnect', ()=>{
-        console.log(`[server] IP: ${socket.userIP} 서버 연결 종료.`);
+    // socket.on('disconnect', ()=>{
+    //     console.log(`[server] IP: ${socket.userIP} 서버 연결 종료.`);
         
-        if (userSessions.has(socket.id)) {
+    //     if (userSessions.has(socket.id)) {
+    //         handleDisconnection(socket.id);
+    //         clearSession(socket.id);
+    //     } else {
+    //         console.log(`[server] Session for ${socket.id} already cleared.`);
+    //     }
+    // });
+    socket.on('disconnect', () => {
+        if (isMoblie(socket)) {
+            console.log(`[server] Mobile device detected. Preserving session for ${socket.id}`);
+            const session = userSessions.get(socket.id);
+    
+            if (session) {
+                // 일정 시간 동안 세션 유지
+                const timeout = setTimeout(() => {
+                    if (!io.sockets.sockets.has(socket.id)) {
+                        console.log(`[server] Mobile session expired for ${socket.id}`);
+                        clearSession(socket.id); // 연결 복구되지 않으면 세션 삭제
+                    }
+                }, SESSION_DURATION);
+    
+                // 세션 유지 정보를 갱신
+                userSessions.set(socket.id, { ...session, timeout });
+            } 
+        }else if (userSessions.has(socket.id)) {
+            console.log(`[server] Clearing session for ${socket.id}`);
             handleDisconnection(socket.id);
             clearSession(socket.id);
         } else {
             console.log(`[server] Session for ${socket.id} already cleared.`);
         }
     });
+
 
     // 연결 종료 (유저 요청)
     socket.on('user-disconnect', () => {
@@ -537,6 +572,11 @@ io.on('connection', async (socket) => {
 /* function */
 function delay(ms) {
     return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+function isMoblie(){
+    const userAgent = socket.handshake.headers['user-agnet'] || '';
+    return /mobile|android|iphone|ipad|phone/i.test(userAgent);
 }
 
 //expired
