@@ -389,38 +389,92 @@ io.on('connection', async (socket) => {
 
 
     // 메시지 전송 처리
+    // socket.on('chat-message', async (msg) => {
+    //     const chatRoom = getChatRoomByUser(socket.id); // 현재 소켓 ID로 방 정보 가져오기
+    //     if (chatRoom) {
+    //         chatRoom.room.users.forEach(user => {
+    //             const messageType = user.id === socket.id ? 'sender' : 'receiver';
+               
+    //             user.socket.emit('chat-message', {
+    //                 sender: socket.nickname,
+    //                 message: msg,
+    //                 messageType: messageType
+    //             });
+    //         });
+    //         console.log(`[server] Message from ${socket.nickname} in room ${chatRoom.roomId}: ${msg}`);
+        
+    //         // 로그처리 : 데이터 생성
+    //         const logData = {
+    //             nickname: socket.nickname,
+    //             userIP: socket.userIP,
+    //             message: msg,     
+    //             timestamp: new Date(),
+    //         };
+    //         console.log(`[server] Log data:`, logData); // 디버깅용
+    //         try {
+    //             await saveChatLog(chatRoom.roomId, logData); // 채팅방 ID와 로그 데이터 저장
+    //             console.log(`[server] Log saved for room ${chatRoom.roomId}`);
+    //         } catch (error) {
+    //             console.error(`[server] Log failed to save for room ${chatRoom.roomId}: ${error.message}`);
+    //         }
+    //         // 세션 타이머 리셋
+    //         resetSessionTimeout(socket.id); //메세지 전송시 세션 타이머 리셋
+    //     } else {
+    //         console.log(`[server] 메시지 처리 실패: ${socket.nickname}is not in a chat room.`);
+    //     }
+    // });
+
+    // 메시지 전송 처리
     socket.on('chat-message', async (msg) => {
         const chatRoom = getChatRoomByUser(socket.id); // 현재 소켓 ID로 방 정보 가져오기
-        if (chatRoom) {
-            chatRoom.room.users.forEach(user => {
-                const messageType = user.id === socket.id ? 'sender' : 'receiver';
-               
-                user.socket.emit('chat-message', {
-                    sender: socket.nickname,
-                    message: msg,
-                    messageType: messageType
-                });
-            });
-            // console.log(`[server] Message from ${socket.nickname} in room ${chatRoom.roomId}: ${msg}`);
-        
-            // 로그처리 : 데이터 생성
-            const logData = {
-                nickname: socket.nickname,
-                userIP: socket.userIP,
-                message: msg,     
-                timestamp: new Date(),
-            };
-            //console.log(`[server] Log data:`, logData); // 디버깅용
-            try {
-                await saveChatLog(chatRoom.roomId, logData); // 채팅방 ID와 로그 데이터 저장
-                // console.log(`[server] Log saved for room ${chatRoom.roomId}`);
-            } catch (error) {
-                console.error(`[server] Log failed to save for room ${chatRoom.roomId}: ${error.message}`);
+
+        if (!chatRoom) {
+            console.log(`[server] 메시지 처리 실패`);
+            return;
+        }
+
+        // 방에 있는 유저들의 소켓 가져오기
+        const { room, roomId } = chatRoom;
+
+        room.users.forEach(user => {
+            const messageType = user.id === socket.id ? 'sender' : 'receiver';
+            
+            // 백그라운드 상태에서 메시지 전송 가능
+            const recipientSession = userSessions.get(user.id);
+            if (recipientSession && recipientSession.background) {
+                console.log(`[server] User ${user.id} is in background. Message still delivered.`);
             }
-            // 세션 타이머 리셋
-            resetSessionTimeout(socket.id); //메세지 전송시 세션 타이머 리셋
+
+            // 메시지 전송
+            user.socket.emit('chat-message', {
+                sender: socket.nickname,
+                message: msg,
+                messageType: messageType
+            });
+        });
+
+        // 로그 저장
+        const logData = {
+            nickname: socket.nickname,
+            userIP: socket.userIP,
+            message: msg,
+            timestamp: new Date(),
+        };
+
+        try {
+            await saveChatLog(roomId, logData);
+            console.log(`[server] Log saved for room ${roomId}`);
+        } catch (error) {
+            console.error(`[server] Log failed to save for room ${roomId}: ${error.message}`);
+        }
+
+        // 세션 상태 확인 및 타이머 리셋
+        const senderSession = userSessions.get(socket.id);
+
+        if (senderSession) {
+            resetSessionTimeout(socket.id); // 메시지 전송 시 세션 타이머 리셋
         } else {
-            console.log(`[server] 메시지 처리 실패: ${socket.nickname}is not in a chat room.`);
+            console.log(`[server] 세션이 만료되어 메시지를 처리할 수 없습니다: ${socket.id}`);
         }
     });
 
@@ -503,19 +557,9 @@ io.on('connection', async (socket) => {
             const session = userSessions.get(socket.id);
             if (session) {
                 clearTimeout(session.timeout);
+                session.background = true;
+                userSessions.set(socket.id, session);
             }
-            const timeout = setTimeout(() => {
-                handleExpiredSession(socket); // 세션 만료시 처리
-            }, SESSION_DURATION);
-            userSessions.set(socket.id, { timeout });
-
-            // 모바일 세션 관리
-            if (isMoblie(socket)) {
-                console.log(`[server] mobile session for ${socket.id}`);
-                resetSessionTimeout(socket.id);
-            }
-
-
         }
     });
 
@@ -531,27 +575,19 @@ io.on('connection', async (socket) => {
     //     }
     // });
     socket.on('disconnect', () => {
-        if (isMoblie(socket)) {
+        const session = userSessions.get(socket.id);
+        if (isMoblie(socket) && session.background) {
             console.log(`[server] Mobile device detected. Preserving session for ${socket.id}`);
-            const session = userSessions.get(socket.id);
-    
-            if (session) {
-                // 일정 시간 동안 세션 유지
-                const timeout = setTimeout(() => {
-                    if (!io.sockets.sockets.has(socket.id)) {
-                        console.log(`[server] Mobile session expired for ${socket.id}`);
-                        clearSession(socket.id); // 연결 복구되지 않으면 세션 삭제
-                    }
-                }, SESSION_DURATION);
-    
-                // 세션 유지 정보를 갱신
-                userSessions.set(socket.id, { ...session, timeout });
-            } 
-        }else if (userSessions.has(socket.id)) {
-            console.log(`[server] Clearing session for ${socket.id}`);
+            const timeout = setTimeout(() => {
+                if (!io.sockets.sockets.has(socket.id)) {
+                    console.log(`[server] Mobile session expired for ${socket.id}`);
+                    clearSession(socket.id);
+                }
+            }, SESSION_DURATION);
+            userSessions.set(socket.id, { ...session, timeout })
+        } else {
             handleDisconnection(socket.id);
             clearSession(socket.id);
-        } else {
             console.log(`[server] Session for ${socket.id} already cleared.`);
         }
     });
