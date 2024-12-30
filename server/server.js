@@ -574,7 +574,7 @@ function delay(ms) {
     return new Promise(resolve => setTimeout(resolve, ms));
 }
 
-function isMoblie(){
+function isMoblie(socket){
     const userAgent = socket.handshake.headers['user-agnet'] || '';
     return /mobile|android|iphone|ipad|phone/i.test(userAgent);
 }
