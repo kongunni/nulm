@@ -575,7 +575,7 @@ function delay(ms) {
 }
 
 function isMoblie(socket){
-    const userAgent = socket.handshake.headers['user-agnet'] || '';
+    const userAgent = socket.handshake.headers['user-agent'] || '';
     return /mobile|android|iphone|ipad|phone/i.test(userAgent);
 }
 
