@@ -47,6 +47,11 @@ app.use(express.json()); // JSON 데이터 파싱을 위한 미들웨어
 //     }
 // });
 
+
+
+
+
+
 /*
  * 신고 처리 API: 클라이언트가 신고 데이터를 전송하면 이를 처리
  */
@@ -76,6 +81,7 @@ app.post('/chat/report', express.json(), async (req, res) => {
         const currentData = await redisClient.hgetall(reportKey);
         const currentHistory = currentData.history ? JSON.parse(currentData.history) : [];
         const reportCount = (currentData.reportCount ? parseInt(currentData.reportCount) : 0) + 1;
+       
         // 새로운 신고 정보 추가
         const newReport = {
             nickname: partnerNickname || "Unknown",
@@ -84,16 +90,19 @@ app.post('/chat/report', express.json(), async (req, res) => {
         };
         currentHistory.push(newReport);
      
-        const keyType = await redisClient.type(reportKey); // 키 타입 확인
+        const keyType = await redisClient.type(reportKey);
         if (keyType !== 'hash' && keyType !== 'none') {
             console.error(`[server] Redis 키 타입이 올바르지 않습니다: ${keyType}. 키를 초기화합니다.`);
             await redisClient.del(reportKey); // 잘못된 타입의 키 삭제
         }
+
         await redisClient.hset(reportKey, {
             reportCount: reportCount.toString(),
             userIP: partnerIP,
             history: JSON.stringify(currentHistory),
         });
+
+
 
         // MAX_REPORT 초과 여부 확인
         const isBanned = reportCount >= MAX_REPORT;
@@ -104,11 +113,13 @@ app.post('/chat/report', express.json(), async (req, res) => {
 
         // 현재 채팅방 가져오기
         const chatRoom = activeChats.get(roomId);
-        if (chatRoom) {
+        if (chatRoom && chatRoom.users.length === 2 ) {
+        // if (chatRoom) {
             const [user1, user2] = chatRoom.users;
             // 신고자와 신고대상 구분
             const reporterSocket = user1.id === req.body.reporterId ? user1.socket : user2.socket;
             const reportedSocket = user1.id === req.body.reporterId ? user2.socket : user1.socket;
+            
             await handleReport(roomId, reporterSocket, reportedSocket, reasons);
         }
 
@@ -124,6 +135,7 @@ app.post('/chat/report', express.json(), async (req, res) => {
         res.status(500).send({ success: false, message: '신고 처리 중 오류가 발생했습니다.' });
     }
 });
+             
 
 async function handleReport(roomId, reporterSocket, reportedSocket, reasons) {
     const reporterIP = reporterSocket.userIP; // 신고자
@@ -134,15 +146,21 @@ async function handleReport(roomId, reporterSocket, reportedSocket, reasons) {
     try {
         const reportKey = `banned:${reportedIP}`;
         const currentReportData = await redisClient.hgetall(reportKey);
-        let reportCount = currentReportData.reportCount ? parseInt(currentReportData.reportCount) : 0;
-
+       // let reportCount = currentReportData.reportCount ? parseInt(currentReportData.reportCount) : 0;
+       let reportCount = currentReportData?.reportCount ? parseInt(currentReportData.reportCount, 10) : 0;
         // 신고 횟수 증가
         reportCount += 1;
 
         // 기존 신고 사유와 새로운 사유 병합
-        const updatedReasons = currentReportData.reason
-            ? `${currentReportData.reason}, ${reasons.join(', ')}`
-            : reasons.join(', ');
+        // const updatedReasons = currentReportData.reason
+        //     ? `${currentReportData.reason}, ${reasons.join(', ')}`
+        //     : reasons.join(', ');
+
+        const existingReasons = currentReportData?.reason
+            ? currentReportData.reason.split(', ')
+            : [];
+        const updatedReasons = [...new Set([...existingReasons, ...reasons])].join(', ');
+
 
         // Redis에 업데이트
         await redisClient.hset(reportKey, {
@@ -160,43 +178,35 @@ async function handleReport(roomId, reporterSocket, reportedSocket, reasons) {
             //  console.log(`[server] 신고된 사용자 차단 처리 - IP: ${reportedIP}, 신고 수: ${reportCount}`);
         } else {
             reportedSocket.emit('chat-end', { // 신고대상
-                message: '상대방이 채팅을 종료하였습니다.',
+                message: '연결이 종료되었습니다.',
                 messageType: 'system',
             });
         }
 
         // 신고자
         reporterSocket.emit('chat-end', {
-            message: '신고가 접수되어 연결이 종료되었습니다.',
+            message: '연결이 종료되었습니다.',
             messageType: 'system',
         });
 
         // 대기열 처리 및 새로운 매칭 시도
         setTimeout(() => {
+            addToWaitingUsers(reporterSocket);
             reporterSocket.emit('wait-state', {
                 message: '잠시만 기다려 주세요. \n 새로운 유저를 찾고 있습니다.',
                 messageType: 'system',
             });
-            addToWaitingUsers(reporterSocket);
 
             if (!isBanned) {
+                addToWaitingUsers(reportedSocket);
                 reportedSocket.emit('wait-state', {
                     message: '잠시만 기다려 주세요. \n 새로운 유저를 찾고 있습니다.',
                     messageType: 'system',
                 });
-                addToWaitingUsers(reportedSocket);
             }
             matchUsers();
         }, 5000);
 
-        // setTimeout(() => {
-        //     addToWaitingUsers(reporterSocket);
-
-        //     if (!isBanned) {
-        //         addToWaitingUsers(reportedSocket);
-        //     }
-        //     matchUsers();
-        // }, 5000);
     } catch (error) {
         console.error(`[server] 신고 처리 중 오류 발생: ${error.message}`);
     }
@@ -319,13 +329,15 @@ function normalizeIP(ip) {
 }
 
 io.on('connection', async (socket) => {
-    //연결 초기상태 : 입장상태아님
     socket.entered=false;
     
     // 백그라운드 세션 유지 및 세션 설정
     if(!userSessions.has(socket.id)) {
         initializeSession(socket); //세션 초기화 한번만 호출 
     }    
+
+
+
 
     /* enter버튼 클릭시 입장대기열 추가 */
     socket.on('enter-state', async() => {
@@ -373,6 +385,9 @@ io.on('connection', async (socket) => {
         }
     });
 
+
+
+
     // 메시지 전송 처리
     socket.on('chat-message', async (msg) => {
         const chatRoom = getChatRoomByUser(socket.id); // 현재 소켓 ID로 방 정보 가져오기
@@ -408,6 +423,10 @@ io.on('connection', async (socket) => {
             console.log(`[server] 메시지 처리 실패: ${socket.nickname}is not in a chat room.`);
         }
     });
+
+
+
+
 
     // 재연결 (restartBtn 클릭 이벤트 처리)
     socket.on('restart-connect', () => {
@@ -448,8 +467,13 @@ io.on('connection', async (socket) => {
         }, 5000); //5초후 재연결 시도
     });
 
+
+
+
+
     // 신고 종료
     socket.on('report-disconnected', async ({ roomId }) => {
+       
         const chatRoom = getChatRoomByUser(socket.id);
         if (!chatRoom) {
             socket.emit('system-message', { message: '신고 처리를 진행할 방이 없습니다.', messageType: 'error' });
@@ -505,7 +529,6 @@ io.on('connection', async (socket) => {
         handleDisconnection(socket.id);
     });
 }); /* io.on connection */
-
 
 
 
@@ -639,11 +662,20 @@ function createChatRoom(user1, user2) {
 // getChatRoomByUSer
 function getChatRoomByUser(socketId){
     for (const [roomId, room] of activeChats) {
-        if (room.users.some(user => user.id === socketId)) {
-            return { roomId, room };
+        if (room && Array.isArray(room.users)) {
+            const user = room.users.find(user => user.id === socketId);
+            if (user) {
+                return {roomId, room};
+            }
         }
+        return null;
     }
-    return null; // 해당 소켓 ID를 가진 유저가 없을 경우 null 반환
+    // for (const [roomId, room] of activeChats) {
+    //     if (room.users.some(user => user.id === socketId)) {
+    //         return { roomId, room };
+    //     }
+    // }
+    // return null; // 해당 소켓 ID를 가진 유저가 없을 경우 null 반환
 };
 
 // 채팅방 비활성화

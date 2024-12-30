@@ -5,6 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>nulm. </title>
+    <link rel="icon" type="image/png" href="images/nulm_icon.png">
     <link rel="stylesheet" href="css/common.css">
     <link rel="stylesheet" href="css/index.css">
     <link rel="stylesheet" href="css/fonts.css">
@@ -25,10 +26,9 @@
                 <a href="index.html">HOME</a>
                 <a href="aboutPage.html">ABOUT</a>
                 <a href="chatPage.html">CHAT</a>
-                <!-- <a href="#">CONTACT</a> -->
             </nav>
             <div class="box nav-contact-container contact-button">
-                <button id="contactBtn">CONCTACT</button>
+                <button id="contactBtn" onclick="goToContactPage()">CONCTACT</button>
             </div>
             <div class="hamburger-menu" onclick="toggleMenu()">☰</div>
         </header>
@@ -40,7 +40,7 @@
                 <a href="index.html">HOME</a>
                 <a href="aboutPage.html">ABOUT</a>
                 <a href="chatPage.html">CHAT</a>
-                <a href="#">CONTACT</a>
+                <a href="contactPage.html">CONTACT</a>
             </div>
             <div class="full-screen-nav-close-btn" onclick="toggleMenu()">✖</div>
         </div>
@@ -76,24 +76,24 @@
                         <div class="review-img">
                             <img src="images/review1.png" alt="User">
                         </div>
-                        <span>“익명이라 처음엔 어색했지만, 
-                            생각보다 진솔한 대화를 나눌 수 있었어요!”
+                        <span>익명이라 처음엔 어색했지만 
+                            생각보다 진솔한 대화를 나눌 수 있었어요
                         </span>
                     </div>
                     <div class="review">
                         <div class="review-img" >
                             <img src="images/review2.png" alt="User">
                         </div>
-                        <span>“심심해서 시작했는데, 
-                            뜻밖의 친구를 만났습니다.”
+                        <span>심심해서 시작했는데
+                            뜻밖의 친구를 만났습니다
                         </span>
                     </div>
                     <div class="review">
                         <div class="review-img">
-                            <img src="images/review4.png" alt="User">
+                            <img src="images/review3.png" alt="User">
                         </div>
-                        <span>“비어있는 가능성을 채운다라.
-                              낭만적이잖아요.”
+                        <span>비어있는 가능성을 채운다라
+                              낭만적이잖아요
                         </span>
                     </div>
                 </div>
@@ -127,6 +127,10 @@ function toggleMenu() {
 // chat enter Btn
 function goToChatPage() {
     window.location.href='chatPage.html';
+}
+
+function goToContactPage() {
+    // window.location.href='contactPage.html';
 }
 
     // 1. 스플래시 화면 처리

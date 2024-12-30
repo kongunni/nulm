@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
     <title>nulm. </title>
+    <link rel="icon" type="image/png" href="images/nulm_icon.png">
     <link rel="stylesheet" href="css/common.css">
     <link rel="stylesheet" href="css/chat.css">
     <link rel="stylesheet" href="css/fonts.css">
@@ -17,11 +18,10 @@
             <nav class="box nav-menu-container nav">
                 <a href="index.html">HOME</a>
                 <a href="aboutPage.html">ABOUT</a>
-                <a href="chat.html">CHAT</a>
-                <!-- <a href="#">CONTACT</a> -->
+                <a href="chatPage.html">CHAT</a>
             </nav>
             <div class="box nav-contact-container contact-button">
-                <button id="contactBtn">CONCTACT</button>
+                <button id="contactBtn" onclick="goToContactPage()">CONCTACT</button>
             </div>
             <div class="hamburger-menu" onclick="toggleMenu()">☰</div>
         </header>
@@ -33,7 +33,7 @@
                 <a href="index.html">HOME</a>
                 <a href="aboutPage.html">ABOUT</a>
                 <a href="chatPage.html">CHAT</a>
-                <a href="#">CONTACT</a>
+                <a href="contactPage.html">CONTACT</a>
             </div>
             <div class="full-screen-nav-close-btn" onclick="toggleMenu()">✖</div>
         </div>
@@ -122,6 +122,11 @@
     function toggleMenu() {
         const fullScreenNav = document.getElementById('fullScreenNav');
         fullScreenNav.classList.toggle('open');
+    }
+
+    // go to contact
+    function goToContactPage(){
+        // window.location.href='contactPage.html';
     }
 
 

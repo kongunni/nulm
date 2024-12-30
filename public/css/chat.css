@@ -1,10 +1,31 @@
-       /* button 기본 속성 제거*/
         button {
-            all: unset; /* 모든 기본 스타일 제거 */
-            display: inline-block; /* 버튼 크기와 배치를 조정하기 위해 추가 */
-            cursor: pointer; /* 클릭 가능한 상태를 유지 */
+            all: unset;
+            display: inline-block; 
+            cursor: pointer; 
         }
         
+        .contact-button button{
+            all:revert;
+            padding: 10px 20px;
+            border: 2px solid #e65729;
+            border-radius: 25px;
+            background: #e65729;
+            color: #fdf6ed;
+            font-weight: bold;
+            cursor: pointer;
+            margin-top: 10px;
+            max-width: 110px;
+            min-width: 100px;
+        }        
+
+
+        .contact-button button:hover{
+            background-color: black;
+            border: 2px solid black;
+            animation: fadeIn 3s ease-in forwards;
+        }
+
+
         .chat-container {
             display: flex;
             width: 100%;

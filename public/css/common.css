@@ -64,12 +64,6 @@ a{
     justify-content: center !important;
 } 
 
-.nav-container {
-    grid-column: 1 / 2; /* 첫번째 열*/
-    grid-row: 1 / 2; /* 첫번째 줄*/
-    border-bottom: 2px solid #e65729;
-}
-
 /* 네비게이션 바 */
 /* .a-box */
 .nav-container {
@@ -81,6 +75,8 @@ a{
     margin-bottom: 20px;
     border-bottom: 2px solid #e65729;
     align-items: stretch;
+    grid-column: 1 / 2; /* 첫번째 열*/
+    grid-row: 1 / 2; /* 첫번째 줄*/
 }
 
 /* a-box-1  */

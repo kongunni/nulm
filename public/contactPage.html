@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="UTF-8">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>nulm. </title>
+    <link rel="icon" type="image/png" href="images/nulm_icon.png">
+    <link rel="stylesheet" href="css/common.css">
+    <link rel="stylesheet" href="css/fonts.css">
+    <style>
+        html, body {
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+            text-decoration: none;
+        }
+
+        input, textarea{
+            outline: none;
+        }
+
+        .contact-container {
+            display: flex;
+            background-color: #fdf6ed;
+            width: 100%;
+            height: 800px;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .contact-framer {
+            display: flex;
+            flex-direction: row;
+            justify-content: center;
+            align-items: center;
+            gap: 0;
+            width: 90%;
+            max-width: 70rem;
+            height: 500px;
+            margin: 0;
+            padding: 0;
+        }  
+
+        .contact-section, .contact-form {
+            flex:1;
+            box-sizing: border-box;
+            width: 50%;
+            height: 500px;
+        }
+        
+        .contact-section {
+            border-right: none;
+            background-color: black;
+            border-radius: 20px 0 0 20px;
+        }
+        
+        .contact-section-text {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .contact-section-text h1 {
+            font-size: 7.5rem;
+            font-family: 'DOSMyungjo';
+            color: white;
+        }
+
+        #contact-text-secondary {
+            display: flex;
+            justify-content: flex-end;
+        }
+        
+        .contact-form {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            border-radius: 0 20px 20px 0;
+            background-color: black;
+            border: none;
+            padding-bottom: 20px;
+        }
+
+
+        .form-framer {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            margin-bottom: 20px;
+            padding: 20px;
+            width: 88%;
+            height: 88%;
+            background-color: white;
+            border-radius: 20px;
+        }
+
+        .form-framer label {
+            font-family: 'DOSMyungjo';
+            font-size: 20px;
+            font-weight: bold;
+            color: #2c2c2c;
+            z-index: 999;
+            position: relative;
+        }
+
+        .form-framer input, .form-framer textarea{
+            color: #2c2c2c;
+            width: 100%;
+            padding: 10px;
+            border: none;
+            border-bottom: 1px solid;
+            border-radius: 5px;
+            box-sizing: border-box;
+
+            margin-bottom: 15px;
+            margin-top: -10px;
+        }
+
+        /*textarea*/
+        #contents {
+            height: 250px;
+            resize: none;
+            padding: 10px;
+            box-sizing: border-box;
+            overflow-y: auto;
+        }
+
+        .btn-framer {
+            display: flex;
+            justify-content: flex-end;
+        }
+
+        #submitBtn {
+            border: none;
+            background-color: #2c2c2c;
+            color: white;
+            font-size: 24px;
+            font-family: 'DOSMyungjo';
+            border-radius: 20px;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+        }
+
+        
+
+
+        .footer {
+            margin-top: 0;
+        }
+
+        @media screen and (max-width: 844px) {
+            .contact-framer {
+                flex-direction: column;
+                border-radius: 20px;
+                height: auto; 
+            }
+
+            .contact-section, .contact-form {
+                width: 100%;
+                height: auto;
+                margin: 0; 
+                /* border: 1px solid; */
+            }
+    
+            .contact-section {
+                border-radius: 20px 20px 0 0;
+                border-bottom: none;
+            }
+            .contact-section-text h1 {
+                font-size: 6rem;
+            }
+            .contact-form {
+                border-radius: 0 0 20px 20px;
+            }
+            
+
+            #contents {
+                height: 150px;
+            }
+            .footer {
+                margin-top: 0;
+            }
+
+        }
+    
+
+        @media screen and (max-width: 430px) {
+            
+            .contact-framer {
+            }
+            .contact-section-text h1 {
+                font-size: 5rem;
+                height: 30px;
+            }
+
+            .form-framer{
+                width: 80%;
+                height: 80%;
+            }
+            #contents {
+                height: 70px;
+            }
+
+            .footer {
+                margin-top: 0;
+            }
+            
+        }
+
+    </style>
+
+</head>
+<body>
+    
+    <div id="main" style="overflow-x: hidden;">
+        <header class="nav-container" style="width: 100%;">
+            <div class="box nav-logo-container logo" >
+                <a href="index.html">Nulm.</a>
+            </div>
+            <nav class="box nav-menu-container nav">
+                <a href="index.html">HOME</a>
+                <a href="aboutPage.html">ABOUT</a>
+                <a href="chatPage.html">CHAT</a>
+            </nav>
+            <div class="box nav-contact-container contact-button">
+                <button id="contactBtn" onclick="goToContactPage()">CONCTACT</button>
+            </div>
+            <div class="hamburger-menu" onclick="toggleMenu()">☰</div>
+        </header>
+
+         <!-- full screen navigation -->
+         <div class="full-screen-nav" id="fullScreenNav">
+            <div class="full-screen-nav-content">
+                <div class="logo"> nulm. </div>
+                <a href="index.html">HOME</a>
+                <a href="aboutPage.html">ABOUT</a>
+                <a href="chatPage.html">CHAT</a>
+                <a href="contactPage.html">CONTACT</a>
+            </div>
+            <div class="full-screen-nav-close-btn" onclick="toggleMenu()">✖</div>
+        </div>
+
+        <!--contact 영역-->
+        <div class="contact-container">
+            <div class="contact-framer">
+                <div class="contact-section">
+                    <div class="contact-section-text">
+                        <h1>contact.</h1>
+                        <h1 id="contact-text-secondary">nulm.</h1>
+                    </div>
+                </div>
+                <div class="contact-form">
+                    <div class="form-framer">
+                        <form action="/contact-submit" method="POST">
+                            <label for="name">name. </label>
+                            <input type="text" id="cname" name="cname" required>
+                            <label for="name">email. </label>
+                            <input type="text" id="cemail" name="cemail" required>
+                            <label for="name">content. </label>
+                            <textarea id="contents" name="contents"></textarea>
+                            <div class="btn-framer">
+                                <button type="submit" id="submitBtn" name="submitBtn"> submit</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+
+        <!-- chatPage 에서 navigation css 달라짐 -- contact버튼이랑 Nav-box -->
+
+        <!-- footer 영역 -->
+        <footer class="footer">
+            <div class="footer-content">
+                <p>Nulm.</p>
+                <p>GASAN, GEUMCHEON, SEOUL, KOREA</p>
+                <p>YI JI YEONG</p>
+                <p>+82 10 5072 3383</p>
+                <p>KONGUNNI821@GMAIL.COM</p>
+            </div>
+        </footer>
+    </div>
+</body>
+<script>
+// hamburger menu
+function toggleMenu() {
+    const fullScreenNav = document.getElementById('fullScreenNav');
+    fullScreenNav.classList.toggle('open');
+}
+
+function goToContactPage() {
+    
+}
+
+</script>
+</html>

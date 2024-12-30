@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>nulm. </title>
+    <link rel="icon" type="image/png" href="images/nulm_icon.png">
     <link rel="stylesheet" href="css/common.css">
     <link rel="stylesheet" href="css/fonts.css">
     <style>
@@ -274,11 +275,10 @@
             <nav class="box nav-menu-container nav">
                 <a href="index.html">HOME</a>
                 <a href="aboutPage.html">ABOUT</a>
-                <a href="chat.html">CHAT</a>
-                <!-- <a href="#">CONTACT</a> -->
+                <a href="chatPage.html">CHAT</a>
             </nav>
             <div class="box nav-contact-container contact-button">
-                <button id="contactBtn">CONCTACT</button>
+                <button id="contactBtn" onclick="goToContactPage()">CONCTACT</button>
             </div>
             <div class="hamburger-menu" onclick="toggleMenu()">☰</div>
         </header>
@@ -379,80 +379,76 @@ function toggleMenu() {
     fullScreenNav.classList.toggle('open');
 }
 
-        const images = [
-            { src: 'images/1.jpeg', text: '예측할 수 없는 만남\n 널름이 시작해요' },
-            { src: 'images/about-time.gif', text: '시간이 순삭되는 대화의 즐거움\n 지금 바로 경험해요' },
-            { src: 'images/about-where.gif', text: '웹 브라우저만 있다면 \n 어디서든 언제든 연결돼요' },
-            { src: 'images/4.jpeg', text: '복잡한 절차는 없어요\n 널름으로 연결돼요' },
-        ];
+function goToContactPage() {
+    // window.location.href='contactPage.html';
+}
 
-        // DOM에 이미지와 텍스트 추가
-        const scrollingImages = document.getElementById("scrollingImages");
+const images = [
+    { src: 'images/about-time.gif', text: '시간이 순삭되는 대화의 즐거움\n 지금 바로 경험해요' },
+    { src: 'images/4.jpeg', text: '복잡한 절차는 없어요\n 널름으로 연결돼요' },
+    { src: 'images/5.jpeg', text: '예측할 수 없는 만남\n 널름이 시작해요' },
+    { src: 'images/about-where.gif', text: '웹 브라우저만 있다면 \n 어디서든 언제든 연결돼요' },
+];
 
-        images.forEach(({ src, text }) => {
-            const imgContainer = document.createElement("div");
-            imgContainer.className = "img-container";
-            imgContainer.style.backgroundImage = `url(${src})`;
+// DOM에 이미지와 텍스트 추가
+const scrollingImages = document.getElementById("scrollingImages");
 
-            const overlay = document.createElement("div");
-            overlay.className = "image-with-text";
+images.forEach(({ src, text }) => {
+    const imgContainer = document.createElement("div");
+    imgContainer.className = "img-container";
+    imgContainer.style.backgroundImage = `url(${src})`; 
+    const overlay = document.createElement("div");
+    overlay.className = "image-with-text";
 
-            const textElement = document.createElement("p");
-            textElement.textContent = text;
+    const textElement = document.createElement("p");
+    textElement.textContent = text;
 
-            overlay.appendChild(textElement);
-            imgContainer.appendChild(overlay);
-            scrollingImages.appendChild(imgContainer);
-        });
+    overlay.appendChild(textElement);
+    imgContainer.appendChild(overlay);
+    scrollingImages.appendChild(imgContainer);});
 
-        // 이미지를 두 세트로 복제
-        images.forEach(({ src, text }) => {
-            const imgContainer = document.createElement("div");
-            imgContainer.className = "img-container";
-            imgContainer.style.backgroundImage = `url(${src})`;
+// 이미지를 두 세트로 복제
+images.forEach(({ src, text }) => {
+    const imgContainer = document.createElement("div");
+    imgContainer.className = "img-container";
+    imgContainer.style.backgroundImage = `url(${src})`;
 
-            const overlay = document.createElement("div");
-            overlay.className = "image-with-text";
+    const overlay = document.createElement("div");
+    overlay.className = "image-with-text";
 
-            const textElement = document.createElement("p");
-            textElement.textContent = text;
+    const textElement = document.createElement("p");
+    textElement.textContent = text;
 
-            overlay.appendChild(textElement);
-            imgContainer.appendChild(overlay);
-            scrollingImages.appendChild(imgContainer);
-        });
+    overlay.appendChild(textElement);
+    imgContainer.appendChild(overlay);
+    scrollingImages.appendChild(imgContainer);
+});
 
-        // 무한 스크롤 애니메이션
-        let scrollPosition = 0;
-        const scrollSpeed = 1.5; // 스크롤 속도 (픽셀 단위)
+// 무한 스크롤 애니메이션
+let scrollPosition = 0;
+const scrollSpeed = 1.5; // 스크롤 속도 (픽셀 단위)
+function animateScroll() {
+    scrollPosition -= scrollSpeed;
+    // 스크롤 위치 업데이트
+    scrollingImages.style.transform = `translateX(${scrollPosition}px)`;
+    // 한 세트의 이미지를 완전히 넘기면 초기화
+    const totalWidth = scrollingImages.scrollWidth / 2;
+    if (Math.abs(scrollPosition) >= totalWidth) {
+        scrollPosition = 0; // 위치 초기화
+    }
+    requestAnimationFrame(animateScroll);
+}
+animateScroll();
 
-        function animateScroll() {
-            scrollPosition -= scrollSpeed;
-
-            // 스크롤 위치 업데이트
-            scrollingImages.style.transform = `translateX(${scrollPosition}px)`;
-
-            // 한 세트의 이미지를 완전히 넘기면 초기화
-            const totalWidth = scrollingImages.scrollWidth / 2;
-            if (Math.abs(scrollPosition) >= totalWidth) {
-                scrollPosition = 0; // 위치 초기화
-            }
-
-            requestAnimationFrame(animateScroll);
-        }
-
-        animateScroll();
-        
-
-        // 이미지 클릭 시 효과 추가
-        document.querySelectorAll('.img-container').forEach(img => {
-            img.addEventListener('click', () => {
-                img.classList.add('clicked');
-                setTimeout(() => {
-                    img.classList.remove('clicked');
-                }, 500); // transition 시간과 동일
-            });
-        });
+// 이미지 클릭 시 효과 추가
+document.querySelectorAll('.img-container').forEach(img => {
+    img.addEventListener('click', () => {
+        img.classList.add('clicked');
+        setTimeout(() => {
+            img.classList.remove('clicked');
+        }, 500); // transition 시간과 동일
+    });
+});
 
 
 </script>

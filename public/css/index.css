@@ -230,6 +230,7 @@ body, html {
 
 .review span {
     white-space: pre-line;
+    color: black;
 }
 
 .review-img {
@@ -250,6 +251,7 @@ body, html {
     object-fit: cover;
     object-position: center; 
     margin: 5px 0;
+    scale: 1.5;
 }
 
 /*chat-entry-container*/
