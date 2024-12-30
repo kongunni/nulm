@@ -477,7 +477,6 @@ io.on('connection', async (socket) => {
 
 
 
-
     // 재연결 (restartBtn 클릭 이벤트 처리)
     socket.on('restart-connect', () => {
         // console.log(`[server] ${socket.userIP}님이 재연결을 요청하였습니다.`);
@@ -582,12 +581,12 @@ io.on('connection', async (socket) => {
     //         console.log(`[server] Session for ${socket.id} already cleared.`);
     //     }
     // });
-
     socket.on('disconnect', () => {
         const session = userSessions.get(socket.id);
     
         if (session && session.background && isMoblie(socket)) {
             console.log(`[server] Mobile user disconnected temporarily: ${socket.id}`);
+    
             // 세션 만료 타이머 시작
             const timeout = setTimeout(() => {
                 if (!io.sockets.sockets.has(socket.id)) {
