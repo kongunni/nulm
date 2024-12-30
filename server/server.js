@@ -426,33 +426,31 @@ io.on('connection', async (socket) => {
 
     // 메시지 전송 처리
     socket.on('chat-message', async (msg) => {
-        const chatRoom = getChatRoomByUser(socket.id); // 현재 소켓 ID로 방 정보 가져오기
-
+        const chatRoom = getChatRoomByUser(socket.id);
+    
         if (!chatRoom) {
             console.log(`[server] 메시지 처리 실패`);
             return;
         }
-
-        // 방에 있는 유저들의 소켓 가져오기
+    
         const { room, roomId } = chatRoom;
-
+    
         room.users.forEach(user => {
             const messageType = user.id === socket.id ? 'sender' : 'receiver';
-            
-            // 백그라운드 상태에서 메시지 전송 가능
+    
+            // 백그라운드 상태 확인 및 메시지 전송
             const recipientSession = userSessions.get(user.id);
             if (recipientSession && recipientSession.background) {
                 console.log(`[server] User ${user.id} is in background. Message still delivered.`);
             }
-
-            // 메시지 전송
+    
             user.socket.emit('chat-message', {
                 sender: socket.nickname,
                 message: msg,
-                messageType: messageType
+                messageType,
             });
         });
-
+    
         // 로그 저장
         const logData = {
             nickname: socket.nickname,
@@ -460,24 +458,22 @@ io.on('connection', async (socket) => {
             message: msg,
             timestamp: new Date(),
         };
-
+    
         try {
             await saveChatLog(roomId, logData);
             console.log(`[server] Log saved for room ${roomId}`);
         } catch (error) {
             console.error(`[server] Log failed to save for room ${roomId}: ${error.message}`);
         }
-
+    
         // 세션 상태 확인 및 타이머 리셋
         const senderSession = userSessions.get(socket.id);
-
         if (senderSession) {
             resetSessionTimeout(socket.id); // 메시지 전송 시 세션 타이머 리셋
         } else {
             console.log(`[server] 세션이 만료되어 메시지를 처리할 수 없습니다: ${socket.id}`);
         }
     });
-
 
 
 
@@ -549,18 +545,30 @@ io.on('connection', async (socket) => {
     // 세션 처리 - 백그라운드와 서버 만료
     socket.on('session-action', (action) => {
 
+        // if (action === 'reset') {
+        //     // console.log(`[server] ${socket.nickname}[${socket.userIP}] session reset.`);
+        //     resetSessionTimeout(socket.id);
+        // } else if (action === 'background') {
+        //     console.log(`[server] ${socket.nickname}[${socket.userIP}]is now in the background.`);
+        //     const session = userSessions.get(socket.id);
+        //     if (session) {
+        //         clearTimeout(session.timeout);
+        //         session.background = true;
+        //         userSessions.set(socket.id, session);
+        //     }
+        // }
         if (action === 'reset') {
-            // console.log(`[server] ${socket.nickname}[${socket.userIP}] session reset.`);
             resetSessionTimeout(socket.id);
         } else if (action === 'background') {
-            console.log(`[server] ${socket.nickname}[${socket.userIP}]is now in the background.`);
+            console.log(`[server] ${socket.nickname}[${socket.userIP}] is now in the background.`);
             const session = userSessions.get(socket.id);
             if (session) {
                 clearTimeout(session.timeout);
-                session.background = true;
+                session.background = true; // 백그라운드 상태 활성화
                 userSessions.set(socket.id, session);
             }
         }
+
     });
 
     // 연결 종료 (시스템/네트워크 종료시) 
@@ -574,24 +582,28 @@ io.on('connection', async (socket) => {
     //         console.log(`[server] Session for ${socket.id} already cleared.`);
     //     }
     // });
+
     socket.on('disconnect', () => {
         const session = userSessions.get(socket.id);
-        if (isMoblie(socket) && session.background) {
-            console.log(`[server] Mobile device detected. Preserving session for ${socket.id}`);
+    
+        if (session && session.background && isMoblie(socket)) {
+            console.log(`[server] Mobile user disconnected temporarily: ${socket.id}`);
+            // 세션 만료 타이머 시작
             const timeout = setTimeout(() => {
                 if (!io.sockets.sockets.has(socket.id)) {
                     console.log(`[server] Mobile session expired for ${socket.id}`);
-                    clearSession(socket.id);
+                    clearSession(socket.id); // 복구되지 않으면 세션 삭제
                 }
             }, SESSION_DURATION);
-            userSessions.set(socket.id, { ...session, timeout })
+    
+            // 백그라운드 상태 유지
+            userSessions.set(socket.id, { ...session, timeout });
         } else {
+            console.log(`[server] Clearing session for disconnected user: ${socket.id}`);
             handleDisconnection(socket.id);
             clearSession(socket.id);
-            console.log(`[server] Session for ${socket.id} already cleared.`);
         }
     });
-
 
     // 연결 종료 (유저 요청)
     socket.on('user-disconnect', () => {
@@ -646,21 +658,37 @@ function initializeSession(socket) {
 }
 
 // 세션 타이머 리셋
+// function resetSessionTimeout(socketId) {
+//     const session = userSessions.get(socketId);
+//     if (session) {
+//         clearTimeout(session.timeout);
+//     }
+//     const newExpiryTime = Date.now() + SESSION_DURATION;
+//     const timeout = setTimeout(() => {
+//         const socket = io.sockets.sockets.get(socketId);
+//         if (socket) {
+//             handleExpiredSession(socket);
+//         }
+//     }, SESSION_DURATION);
+//     userSessions.set(socketId, { expiryTime: newExpiryTime, timeout });
+//     console.log(`[server] SESSION TIMEOUT RESET : ${socketId}`);
+// }
 function resetSessionTimeout(socketId) {
     const session = userSessions.get(socketId);
     if (session) {
         clearTimeout(session.timeout);
     }
-    const newExpiryTime = Date.now() + SESSION_DURATION;
     const timeout = setTimeout(() => {
         const socket = io.sockets.sockets.get(socketId);
-        if (socket) {
+        if (!socket) {
             handleExpiredSession(socket);
         }
     }, SESSION_DURATION);
-    userSessions.set(socketId, { expiryTime: newExpiryTime, timeout });
+    userSessions.set(socketId, { ...session, timeout });
     console.log(`[server] SESSION TIMEOUT RESET : ${socketId}`);
 }
+
+
 
 // 세션 종료 및 타이머 제거
 function clearSession(socketId) {
