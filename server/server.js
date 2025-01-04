@@ -73,6 +73,13 @@ app.post('/chat/report', express.json(), async (req, res) => {
     try {
         const reportKey = `banned:${partnerIP}`;
         const timestamp = moment().tz("Asia/Seoul").format("YY-MM-DD HH:mm:ss");
+       
+       const keyTypes = await redisClient.type(reportKey);
+       if (keyTypes !== 'hash' && keyTypes !== 'none') {
+        console.error(`[server] Redis 키 타입이 올바르지 않습니다: ${keyType}. 키를 초기화합니다.`);
+        await redisClient.del(reportKey); // 잘못된 타입의 키 삭제
+       }
+       
         // 기존 데이터 가져오기
         const currentData = await redisClient.hgetall(reportKey);
         const currentHistory = currentData.history ? JSON.parse(currentData.history) : [];
@@ -306,7 +313,7 @@ const waitingUsers = new Map(); //대기열 관리
 const activeChats = new Map(); //활성채팅
 
 // 세션 타임아웃 설정
-const SESSION_DURATION = 3 * 60 * 1000; //test) 1분
+const SESSION_DURATION = 1 * 60 * 1000; //test) 1분
 // const SESSION_DURATION = 8 * 60 * 60 * 1000; //8시간
 const userSessions = new Map(); // 사용자 세션 상태 관리
 
@@ -330,45 +337,6 @@ function normalizeIP(ip) {
 io.on('connection', async (socket) => {
     socket.entered=false;
 
-    //세션 만료
-    function handleSessionTimeout(socketId) {
-        const session = userSessions.get(socketId);
-        if (!session) return;
-
-        const now = Date.now();
-        if (now - session.lastActivity > SESSION_DURATION) {
-            console.log(`[server] session expired : ${socketId}`)
-            userSessions.delete(socketId);
-            removeFromWaitingQueue(socketId);
-
-            const socket = io.sockets.sockets.get(socketId);
-            if (socket) {
-                socket.emit('session-expired', {message: '세션이 만료되었습니다. 다시 접속해 주세요. '});
-            } else {
-                console.error(`[server]no socket found ${socketId}`);
-            }
-        }
-    }
-
-      //세션 초기화
-      function resetSessionTimeout(socketId) {
-        const session = userSessions.get(socketId);
-        
-        if (!session) {
-            console.error(`[server] Session not found for socketId: ${socketId}`);
-            return; // 세션이 없으면 함수 종료
-        }
-
-        // console.log(`[TEST] resetSessionTimeout: ${socketId}`);
-        session.lastActivity = Date.now();
-        session.background = false;
-        
-        clearTimeout(session.timeout);
-        session.timeout = setTimeout(()=> handleSessionTimeout(socketId), SESSION_DURATION);
-        userSessions.set(socketId, session);
-        console.log(`[test] session reset for ${socket.userIP}`)
-    }
-
     /* enter버튼 클릭시 입장대기열 추가 */
     socket.on('enter-state', async() => {
 
@@ -390,7 +358,7 @@ io.on('connection', async (socket) => {
                 timeout: setTimeout(()=>handleSessionTimeout(socket.id), SESSION_DURATION),
             };
 
-            userSessions.set(socket.id, session);
+           userSessions.set(socket.id, session);
 
             // 세션 set 확인용
             for (const [socketId, session] of userSessions.entries()) {
@@ -404,7 +372,6 @@ io.on('connection', async (socket) => {
             try {
                 // 차단된 유저인지 확인
                 const reportCount = await redisClient.get(`banned:${socket.userIP}`);
-
                 if (reportCount && parseInt(reportCount) >= MAX_REPORT) {
                     console.log(`[server] banned: IP:${socket.userIP}] - 리포트 수: ${reportCount}`);
                     socket.emit('ban', { message: '서비스 이용 제한된 사용자입니다. 관리자에게 문의해 주세요.' });
@@ -429,6 +396,7 @@ io.on('connection', async (socket) => {
         }
     });
 
+
     // 메시지 전송 처리
     socket.on('chat-message', async (msg) => {
         const session = userSessions.get(socket.id);
@@ -441,27 +409,30 @@ io.on('connection', async (socket) => {
             return;
         } 
         
-        const now = Date.now();
-        if ( now - session.lastActivity > SESSION_DURATION ) {
-            userSessions.delete(socket.id);
-            const socket = io.sockets.sockets.get(socket.id);
-            if (socket) {
-                socket.emit('session-expired', { message: '세션이 만료되었습니다. 다시 접속해 주세요. '});
-                socket.disconnect();
-            }
-        }
-
         const { room, roomId } = chatRoom;
     
-        room.users.forEach(user => {
-            const messageType = user.id === socket.id ? 'sender' : 'receiver';
+        if (!room || !room.users) {
+            console.error(`[server] Room or users not found for roomId: ${roomId}`);
+            return;
+        }
     
-            // 메시지 전송 처리
+
+        room.users.forEach(user => {
+
+            if (!user.socket || !user.socket.connected) {
+                console.warn(`[server] Socket is not connected for user: ${user.nickname}`);
+                return;
+            }
+    
+            const messageType = user.id === socket.id ? 'sender' : 'receiver';
+             // 메시지 전송 처리
             user.socket.emit('chat-message', {
                 sender: socket.nickname,
                 message: msg,
                 messageType,
             });
+            console.log(`[server] Message sent from ${socket.nickname} to ${user.nickname}, type: ${messageType}`);
+
         });
     
         // 로그 저장
@@ -485,14 +456,15 @@ io.on('connection', async (socket) => {
     socket.on('session-action', (action) => {
         if (action === 'reset') {
             //포그라운드 복귀시 초기화
-            resetSessionTimeout(socket.id);
+            // resetSessionTimeout(socket.id);
+            initializeSession(socket.id);
         } else if (action === 'background') {
             const session = userSessions.get(socket.id);
             if (session) {
                 clearTimeout(session.timeout);
                 session.background = true; 
                 userSessions.set(socket.id, session);
-                console.log(`[test] ${socket.userIP} is background`);
+                console.log(`[test] ${socket.nickname}[${socket.userIP}] is background`);
             }
         }
     });
@@ -558,11 +530,11 @@ io.on('connection', async (socket) => {
 
     // 연결 종료 (시스템/네트워크 종료시) 
     socket.on('disconnect', ()=>{
-        console.log(`[server] IP: ${socket.userIP} 서버 연결 종료.`);
+        console.log(`[server] ${socket.nickname}[${socket.userIP}]서버 연결 종료.`);
         
         if (userSessions.has(socket.id)) {
             handleDisconnection(socket.id);
-            // handleSessionTimeout(socketId);
+            userSessions.delete(socket.id);
         } else {
             console.log(`[server] Session for ${socket.id} already cleared.`);
         }
@@ -570,7 +542,7 @@ io.on('connection', async (socket) => {
 
     // 연결 종료 (유저 요청)
     socket.on('user-disconnect', () => {
-        console.log(`[server] IP: ${socket.userIP} 유저요청 연결 종료. `);
+        console.log(`[server] ${socket.nickname}[${socket.userIP}]유저요청 연결 종료. `);
         // 연결 종료 처리
         handleDisconnection(socket.id);
     });
@@ -582,16 +554,61 @@ function delay(ms) {
     return new Promise(resolve => setTimeout(resolve, ms));
 }
 
-// 세션 종료 및 타이머 제거
-// function clearSession(socketId) {
-//     const session = userSessions.get(socketId);
-//     if (session) {
-//         clearTimeout(session.timeout);
-//         userSessions.delete(socketId);
-//         console.log(`[server] SESSION cleared for ${socketId}`);
-//     }
-//     removeFromWaitingQueue(socketId);  //대기열제거
-// }
+
+
+// 세션 초기화
+function initializeSession(socket) {
+    // const expiryTime = Date.now() + SESSION_DURATION;
+    let session = userSessions.get(socket.id);
+
+    if (!session) {
+        console.log(`[socket.id] no session found for: ${socket.id}`)
+        // console.error(`[server] No session found for socketId: ${socket.id}. Initializing new session.`);
+        session = {
+            lastActivity: Date.now(),
+            background: false,
+            timeout: null,
+        };
+    }
+    session.lastActivity = Date.now();
+    session.background = false;
+    clearTimeout(session.timeout);
+    session.timeout = setTimeout(()=> handleSessionTimeout(socket.id), SESSION_DURATION);
+    userSessions.set(socket.id, session);
+    console.log(`[server] SESSION initialized for ${socket.id}`);
+}
+
+
+//세션 만료
+function handleSessionTimeout(socket) {
+
+    let session = userSessions.get(socket.id);
+    if (!session) return;
+
+    // 세션 삭제
+    userSessions.delete(socket.id);
+
+    // 대기열에서 제거
+    removeFromWaitingQueue(socket.id);
+    console.log(`[server] Session expired for socketId: ${socket.id}`);
+
+    // 소켓에 만료 알림 및 연결 종료
+    const currentSocket = io.sockets.sockets.get(socket.id);
+    if (currentSocket) {
+        currentSocket.emit('session-expired', { message: '세션이 만료되었습니다. 다시 접속해 주세요.' });
+
+        if (currentSocket.entered) {
+            console.log(`[server] Removing user ${socketId} from waiting queue.`);
+        }
+
+        currentSocket.disconnect(true);
+    } else {
+        console.error(`[server] No active socket found for socketId: ${socketId}`);
+    }
+}
+
+
+
 
 // 대기열 관리
 function addToWaitingUsers(socket){
@@ -628,8 +645,8 @@ function getNextUsersForMatch() {
     
     if (users.length >= 2) {
         const selectedUsers = users.slice(0, 2);
+        console.log(`[server] Matched users:`, selectedUsers.map(user => user.nickname));
         selectedUsers.forEach(user => waitingUsers.delete(user.socket.id));
-        // console.log(`[server] Matched users:`, selectedUsers.map(user => user.nickname));
         return selectedUsers;
     }
     console.log(`[server] Not enough users to match.`);
@@ -642,30 +659,37 @@ function createChatRoom(user1, user2) {
 
     // 활성 채팅 목록에 추가
     activeChats.set(roomId, {
+        roomId,
         users: [
             { id: user1.socket.id, nickname: user1.socket.nickname, socket: user1.socket, partner: user2.socket.id },
             { id: user2.socket.id, nickname: user2.socket.nickname, socket: user2.socket, partner: user1.socket.id }
         ],
-        roomId,
     });
 
     user1.socket.join(roomId);
     user2.socket.join(roomId);
-    console.log(`[server] ${user1.nickname}님과 ${user2.nickname}님의 채팅방 생성: ${roomId}`);
+    // console.log(`[server] ${user1.nickname}님과 ${user2.nickname}님의 채팅방 생성: ${roomId}`);
+    console.log(`[server] ${user1.nickname} and ${user2.nickname} - chatRoom: ${roomId}`);
     return roomId;
 }
 
 // 채팅방 찾기
 function getChatRoomByUser(socketId){
-    for (const [roomId, room] of activeChats) {
-        if (room && Array.isArray(room.users)) {
-            const user = room.users.find(user => user.id === socketId);
-            if (user) {
-                return {roomId, room};
-            }
-        }
-        return null;
+    for (const [roomId, room] of activeChats.entries()) {
+        if (room.users.some( user => user.id === socketId )) {
+            return { room, roomId };
+        }    
     }
+    return null;
+    // for (const [roomId, room] of activeChats) {
+    //     if (room && Array.isArray(room.users)) {
+    //         const user = room.users.find(user => user.id === socketId);
+    //         if (user) {
+    //             return {roomId, room};
+    //         }
+    //     }
+    //     return null;
+    // }
 };
 
 // 채팅방 비활성화
@@ -674,17 +698,21 @@ function removeChatRoom(roomId) {
 }
 
 // 유저 매칭
-function matchUsers() {
+// 이전코드
+async function matchUsers() {
+
     const users = getNextUsersForMatch();
+    
     if (users) {
         const [user1, user2] = users;
         const roomId = createChatRoom(user1, user2);
-        notifyChatReady(user1, user2, roomId);
-        // console.log(`[server] Successfully matched users: ${user1.nickname} and ${user2.nickname} in room: ${roomId}`);
+        await notifyChatReady(user1, user2, roomId);
+        console.log(`[server] Successfully matched users: ${user1.nickname} and ${user2.nickname} in room: ${roomId}`);
     } else {
         console.log(`[server] Not enough users to match.`);
     }
 };
+
 
 // 채팅 준비 알림
 async function notifyChatReady(user1, user2, roomId) {
@@ -710,51 +738,82 @@ async function notifyChatReady(user1, user2, roomId) {
 }
 
 // partner - receiver sender 구분용
-function getPartnerSocket(socketId) {
-    for (const [roomId, room] of activeChats) {
-        const user = room.users.find(user => user.id === socketId);
-        if (user) {
-            const partnerId = user.partner;
-            // console.log(`[server] Partner socket ID for ${socketId} is ${partnerId}`);
-            return io.sockets.sockets.get(partnerId); // 상대방의 소켓 객체 반환
-        }
-    }
-    console.log(`[server] No partner found for socket ID: ${socketId}`);
-    return null;
-}
+// function getPartnerSocket(socketId) {
+//     for (const [roomId, room] of activeChats) {
+//         const user = room.users.find(user => user.id === socketId);
+//         if (user) {
+//             const partnerId = user.partner;
+//             // console.log(`[server] Partner socket ID for ${socketId} is ${partnerId}`);
+//             return io.sockets.sockets.get(partnerId); // 상대방의 소켓 객체 반환
+//         }
+//     }
+//     console.log(`[server] No partner found for socket ID: ${socketId}`);
+//     return null;
+// }
 
 // 연결 종료
+// function handleDisconnection(socketId) {
+//     const chatRoom = getChatRoomByUser(socketId);
+
+//     if (chatRoom) {
+//         const { roomId, room } = chatRoom;
+
+
+//         // 상대방 찾기
+//         const partner = room.users.find(user => user.id !== socketId);
+
+//         if (partner && partner.socket.entered && partner.socket.connected) {
+//             // 대기열 중복 추가 방지
+//             if (!waitingUsers.has(partner.socket.id)) {
+//                 const partnerSession = userSessions.get(partner.socket.id);
+//                 if (partnerSession) {
+//                     console.log(`[server] ${partner.nickname}[${partner.userIP}]를 대기열에 다시 추가합니다.`);
+//                     addToWaitingUsers(partner.socket);
+
+//                     // 상대방에게 연결 종료 알림
+//                     partner.socket.emit('chat-end', {
+//                         message: '상대방이 연결을 종료하였습니다. \n 재연결을 위해 잠시만 기다려 주세요.',
+//                         messageType: 'system',
+//                     });
+//                 }
+//             }
+//         }
+//         // 방 삭제
+//         removeChatRoom(roomId);
+//     }
+//     // 종료한 유저를 대기열에서 제거
+//     if (waitingUsers.has(socketId)) {
+//         removeFromWaitingQueue(socketId);
+//     }
+//     console.log(`[server] Disconnected user ${socketId} removed from queue.`);
+// }
+
 function handleDisconnection(socketId) {
     const chatRoom = getChatRoomByUser(socketId);
 
     if (chatRoom) {
-        const { roomId, room } = chatRoom;
+        const { roomId, users } = chatRoom;
 
-        // 상대방 찾기
-        const partner = room.users.find(user => user.id !== socketId);
+        const partner = users.find(user=> user.id !== socketId);
 
-        if (partner && partner.socket.entered && partner.socket.connected) {
-            // 대기열 중복 추가 방지
+        if (partner && partner.socket.entered && parnter.socket.connected) {
             if (!waitingUsers.has(partner.socket.id)) {
-                const partnerSession = userSessions.get(partner.socket.id);
-                if (partnerSession) {
-                    console.log(`[server] ${partner.nickname}[${partner.userIP}]를 대기열에 다시 추가합니다.`);
-                    addToWaitingUsers(partner.socket);
+                addToWaitingUsers(partner.socket);
+                console.log(`${partner.nickname} 대기열 추가`);
+                
 
                     // 상대방에게 연결 종료 알림
-                    partner.socket.emit('chat-end', {
-                        message: '상대방이 연결을 종료하였습니다. \n 재연결을 위해 잠시만 기다려 주세요.',
-                        messageType: 'system',
-                    });
-                }
+                partner.socket.emit('chat-end', {
+                    message: '상대방이 연결을 종료하였습니다. \n 재연결을 위해 잠시만 기다려 주세요.',
+                    messageType: 'system',
+                });
             }
         }
-        // 방 삭제
         removeChatRoom(roomId);
     }
-    // 종료한 유저를 대기열에서 제거
     if (waitingUsers.has(socketId)) {
         removeFromWaitingQueue(socketId);
+        console.log(` 대기열에서 제거 : ${socketId.nickname}`);
     }
-    console.log(`[server] Disconnected user ${socketId} removed from queue.`);
+    console.log(`[server] 연결 종료 처리 완료: ${socketId.nickname}`);
 }
