@@ -456,8 +456,7 @@ io.on('connection', async (socket) => {
     socket.on('session-action', (action) => {
         if (action === 'reset') {
             //포그라운드 복귀시 초기화
-            // resetSessionTimeout(socket.id);
-            initializeSession(socket.id);
+            initializeSession(socket);
         } else if (action === 'background') {
             const session = userSessions.get(socket.id);
             if (session) {
@@ -533,7 +532,7 @@ io.on('connection', async (socket) => {
         console.log(`[server] ${socket.nickname}[${socket.userIP}]서버 연결 종료.`);
         
         if (userSessions.has(socket.id)) {
-            handleDisconnection(socket.id);
+            handleDisconnection(socket);
             userSessions.delete(socket.id);
         } else {
             console.log(`[server] Session for ${socket.id} already cleared.`);
@@ -582,6 +581,11 @@ function initializeSession(socket) {
 //세션 만료
 function handleSessionTimeout(socket) {
 
+    if (!socket || !socket.id) {
+        console.error(`[server] Invalid socket object in handleSessionTimeout`);
+        return;
+    }
+
     let session = userSessions.get(socket.id);
     if (!session) return;
 
@@ -593,18 +597,32 @@ function handleSessionTimeout(socket) {
     console.log(`[server] Session expired for socketId: ${socket.id}`);
 
     // 소켓에 만료 알림 및 연결 종료
-    const currentSocket = io.sockets.sockets.get(socket.id);
-    if (currentSocket) {
-        currentSocket.emit('session-expired', { message: '세션이 만료되었습니다. 다시 접속해 주세요.' });
-
-        if (currentSocket.entered) {
-            console.log(`[server] Removing user ${socketId} from waiting queue.`);
+    
+    if (socket.connected) {
+        socket.emit('session-expired', { message: '세션이 만료되었습니다. 다시 접속해 주세요.' });
+        
+        if (socket.entered) {
+            console.log(`[server] Removing user ${socket.id} from waiting queue.`);
         }
-
-        currentSocket.disconnect(true);
+        
+        socket.disconnect(true);
     } else {
-        console.error(`[server] No active socket found for socketId: ${socketId}`);
+        console.error(`[server] No active socket found for socketId: ${socket.id}`);
     }
+    
+    // 소켓에 만료 알림 및 연결 종료
+    // const currentSocket = io.sockets.sockets.get(socket.id);
+    // if (currentSocket) {
+    //     currentSocket.emit('session-expired', { message: '세션이 만료되었습니다. 다시 접속해 주세요.' });
+
+    //     if (currentSocket.entered) {
+    //         console.log(`[server] Removing user ${socketId} from waiting queue.`);
+    //     }
+
+    //     currentSocket.disconnect(true);
+    // } else {
+    //     console.error(`[server] No active socket found for socketId: ${socketId}`);
+    // }
 }
 
 
