@@ -2,11 +2,9 @@ import Redis from 'ioredis';
 
 // Redis 클라이언트 생성
 const redisClient = new Redis({
-    // host: '211.188.59.208',
-    // host: '52.78.174.219',
-    // password: 'nulm1004master',
     host: '127.0.0.1',
-    port: 6379
+    port: 6379,
+    connectTimeout: 10000,
 });
 
 // 연결 이벤트
