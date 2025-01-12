@@ -471,7 +471,7 @@
             appendMessages(data.message, isSender ? 'sender' : 'receiver');
         });
 
-        // 서버 연결 종료 처리
+        // 채팅 종료시 처리
         socket.on('chat-end', (data) => {
             appendMessages(data.message, 'system'); // 시스템 메시지로 알림 표시
             const chatHeader = document.getElementById('chatHeader');
@@ -479,9 +479,29 @@
                 chatHeader.textContent = ''; // 닉네임 제거
                 console.log('chatHeader content cleared.');
             }
-
             document.getElementById('inputBox').style.display='none'; // 입력창 비활성화
         });
+
+        // 서버 연결 종료 감지
+        socket.on('disconnect', () => {
+            console.log('[client] 서버와 연결이 종료되었습니다.');
+
+            // 시스템 메시지 추가
+            appendMessages('서버 연결이 종료되었습니다.', 'system');
+
+            // 닉네임 및 UI 초기화
+            const chatHeader = document.getElementById('chatHeader');
+            if (chatHeader) {
+                chatHeader.textContent = ''; // 닉네임 제거
+            }
+
+            // 입력창 비활성화
+            const inputBox = document.getElementById('inputBox');
+            if (inputBox) {
+                inputBox.style.display = 'none';
+            }
+        });
+
 
         // 상대방의 요청으로 채팅 종료
         socket.on('user-disconnect', (data) => {
@@ -495,6 +515,7 @@
             document.getElementById('inputBox').style.display='none'; // 입력창 비활성화
 
         });
+
         // 이벤트 리스너 추가
         sendButton.addEventListener('click', handleSend);
         messageInput.addEventListener('keydown', handleSend);

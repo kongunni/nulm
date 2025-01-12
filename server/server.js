@@ -569,9 +569,8 @@ io.on('connection', async (socket) => {
     // 연결 종료 (시스템/네트워크 종료시) 
     socket.on('disconnect', ()=>{
         console.log(`[server] ${socket.nickname}[${socket.userIP}]서버 연결 종료.`);
-        
         if (userSessions.has(socket.id)) {
-            handleDisconnection(socket);
+            handleDisconnection(socket.id);
             userSessions.delete(socket.id);
         } else {
             console.log(`[server] Session for ${socket.id} already cleared.`);
@@ -581,7 +580,6 @@ io.on('connection', async (socket) => {
     // 연결 종료 (유저 요청)
     socket.on('user-disconnect', () => {
         console.log(`[server] ${socket.nickname}[${socket.userIP}]유저요청 연결 종료. `);
-        // 연결 종료 처리
         handleDisconnection(socket.id);
     });
 
@@ -847,28 +845,36 @@ function handleDisconnection(socketId) {
     const chatRoom = getChatRoomByUser(socketId);
 
     if (chatRoom) {
-        const { roomId, users } = chatRoom;
+        // const { roomId, users } = chatRoom;
+        const { roomId, room } = chatRoom;
+       
+        if (!room || !room.users) {
+            console.error(`[server] users 배열을 찾을 수 없습니다.`);
+            return;
+        }
 
-        const partner = users.find(user=> user.id !== socketId);
+        const partner = room.users.find(user => user.id !== socketId);
 
-        if (partner && partner.socket.entered && parnter.socket.connected) {
-            if (!waitingUsers.has(partner.socket.id)) {
+        if (partner && partner.socket && partner.socket.connected) {
+        // if (partner && partner.socket.entered && partner.socket.connected) {
+            // if (!waitingUsers.has(partner.socket.id)) {
                 addToWaitingUsers(partner.socket);
-                console.log(`${partner.nickname} 대기열 추가`);
-                
+                //console.log(`${partner.nickname} 대기열 추가`);
 
                 // 상대방에게 연결 종료 알림
                 partner.socket.emit('chat-end', {
                     message: '상대방이 연결을 종료하였습니다. \n 재연결을 위해 잠시만 기다려 주세요.',
                     messageType: 'system',
                 });
-            }
+            // }
         }
         removeChatRoom(roomId);
     }
+    // if (waitingUsers.has(socketId)) {
     if (waitingUsers.has(socketId)) {
         removeFromWaitingQueue(socketId);
-        console.log(` 대기열에서 제거 : ${socketId.nickname}`);
+        // removeFromWaitingQueue(socketId);
+        console.log(` 대기열에서 제거 : ${socketId}`);
     }
-    console.log(`[server] 연결 종료 처리 완료: ${socketId.nickname}`);
+    console.log(`[server] 연결 종료 처리 완료: ${socketId}`);
 }
