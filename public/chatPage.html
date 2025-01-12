@@ -487,7 +487,7 @@
             console.log('[client] 서버와 연결이 종료되었습니다.');
 
             // 시스템 메시지 추가
-            appendMessages('서버 연결이 종료되었습니다.', 'system');
+            appendMessages(data.message, 'system');
 
             // 닉네임 및 UI 초기화
             const chatHeader = document.getElementById('chatHeader');
