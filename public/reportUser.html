@@ -6,7 +6,6 @@
     <title>nulm. </title>
     <link rel="icon" type="image/png" href="images/nulm_icon.png">
     <link rel="stylesheet" href="css/common.css">
-    <link rel="stylesheet" href="css/chat.css">
     <link rel="stylesheet" href="css/fonts.css">
 </head>
 <body>
@@ -40,62 +39,10 @@
         
         <!-- 화면 영역 -->
         <div class="chat-container">
-            <div class="chat-button-container" id="chatButtonContainer">
-                <div class="enter-section">
-                    <img id="coverImg" src="images/cover-chatPage.jpg" alt="">
-                    <button id="enterBtn"> >> enter << </button>
-                </div>
-            </div>
-            <div class="chat-section" id="chatSection">
-                <div class="chat-box" id="chatBox" style="display: none;">
-                    <div class="chat-header-container">
-                        <div class="chat-header" id="chatHeader"></div>
-                        <div class="chat-btn">
-                            <button id="restartBtn" class="chat-header-btn" type="button">↻</button>
-                            <button id="exitBtn" class="chat-header-btn" type="button" style="color: #e65729;"> X </button>
-                        </div>
-                    </div>
-
-                    <!--report modal-->
-                    <div id="reportModal" class="report-container" style="display: none;">
-                        <div id="modalHeader">
-                            <!-- <h1>report</h1> -->
-                        </div>
-                        <div id="modal-section">
-                            <form id="reportForm">
-                                <label><input type="checkbox" name="reason" value="스팸">스     팸</label>
-                                <label><input type="checkbox" name="reason" value="비속어">비 속 어</label>
-                                <label><input type="checkbox" name="reason" value="금전요구">금전요구</label>
-                                <label><input type="checkbox" name="reason" value="기타" >기     타</label>
-                                <div class="reportBtn">
-                                    <button id="reportSubmitBtn" class="report-form-btn" type="button" onclick="submitReport()">report</button>
-                                    <button id="reportCancelBtn" class="report-form-btn" type="button" onclick="closeReportModal()">cancel</button>
-                                </div>
-                            </form>
-                        </div>
-                    </div>
-
-                    <div class="chat-framer">
-                         <!-- 공지-->
-                        <div class="chat-notification-container" id="notificationBox">
-                            <div class="scrolling-text" id="scrollingText">
-                                ✢ 백그라운드 전환 상태에서 3시간 경과시,
-                                자동으로 연결이 종료될 수 있음을 알립니다.
-                            </div>
-                        </div>
-                        <div class="chat-message" id="messages"></div>
-                        <div class="input-container">
-                            <div id="inputBox" class="input-box">
-                                <input id="message" class="input-msg" type="text"  autocomplete="off">
-                                <button id="emoji-btn">
-                                    <img src="images/icon_emoji.PNG" alt="" width="20px">
-                                </button>
-                                <button id="send">send</button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
+           <div>
+            널름 이용에 제한된 이용자입니다. 
+            <br> 관리자에게 문의해 주세요.
+           </div>
         </div> <!--chat container-->
 
         <!-- footer 영역 -->

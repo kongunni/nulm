@@ -52,7 +52,7 @@ app.use(express.json()); // JSON 데이터 파싱을 위한 미들웨어
  * 신고 처리 API: 클라이언트가 신고 데이터를 전송하면 이를 처리
  */
 
-const MAX_REPORT = 100; // 최대 리포트 수 
+const MAX_REPORT = 3; // 최대 리포트 수 
 app.post('/chat/report', express.json(), async (req, res) => {
     const { roomId, partnerNickname, partnerIP, reasons } = req.body;
 
@@ -111,7 +111,8 @@ app.post('/chat/report', express.json(), async (req, res) => {
         const isBanned = reportCount >= MAX_REPORT;
         
         if (isBanned) {
-            console.log(`[server] MAX_REPORT 초과 유저(IP: ${partnerIP})는 더 이상 nulm을 이용할 수 없습니다. REPORT: ${reportCount}`);
+            // console.log(`[server] MAX_REPORT 초과 유저(IP: ${partnerIP})는 더 이상 nulm을 이용할 수 없습니다. REPORT: ${reportCount}`);
+            res.redirect('reportUser.html');
         }
 
         // 현재 채팅방 가져오기
