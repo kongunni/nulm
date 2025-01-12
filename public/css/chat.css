@@ -128,7 +128,7 @@
             height: 10vh;
             padding-bottom: 15px;
             box-sizing: border-box;
-            z-index: 1000;
+            z-index: 9998;
             overflow: hidden;
             background-color: #ffdec8e3;
             border-radius: 10px;
