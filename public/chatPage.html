@@ -370,7 +370,6 @@
 
         // session - expired
         socket.on('session-expired', (data) => {
-            console.log('[client] SESSION EXPIRED: ', data.message);
             // 세션 만료 시 UI 초기화
             document.getElementById('chatBox').style.display = 'none';
             document.getElementById('chatButtonContainer').style.display = 'flex';
@@ -381,7 +380,7 @@
             setTimeout(() => {
                 window.location.replace('chatPage.html');
                 alert(data.message);
-            }, 100);
+            }, 50);
         });
 
        // message 구분하여 나타내기 
