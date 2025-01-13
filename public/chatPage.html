@@ -129,7 +129,6 @@
         // window.location.href='contactPage.html';
     }
 
-
     // modal reset
     function resetReportModal() {
         const reportForm = document.getElementById('reportForm');
@@ -180,8 +179,8 @@
                     reasons,
                     roomId,
                     partnerNickname,
-                    partnerIP // reported: 신고대상
-                    // reporterId: socket.id //신고자 socketId
+                    partnerIP,
+                    reporterId: socket.id //신고자 socketId
                 })
             })
             .then(response => {

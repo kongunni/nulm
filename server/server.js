@@ -40,9 +40,9 @@ app.use(express.json()); // JSON 데이터 파싱을 위한 미들웨어
 const MAX_REPORT = 3; // 최대 리포트 수 
 
 app.post('/chat/report', express.json(), async (req, res) => {
-    const { roomId, partnerNickname, partnerIP, reasons } = req.body;
+    const { roomId, partnerNickname, partnerIP, reasons, reporterIP } = req.body;
 
-    if (!roomId || !partnerNickname || !partnerIP || !reasons) {
+    if (!roomId || !partnerNickname || !partnerIP || !reasons || !reporterIP) {
         return res.status(400).send({ success: false, message: '신고 데이터가 올바르지 않습니다.' });
     }
     console.log(`[server] 신고 접수 - 닉네임: ${partnerNickname}, IP: ${partnerIP}, 사유: ${reasons.join(', ')}`);
@@ -85,14 +85,7 @@ app.post('/chat/report', express.json(), async (req, res) => {
             history: JSON.stringify(currentHistory),
         });
 
-        // MAX_REPORT 초과 여부 확인
-        // const isBanned = reportCount >= MAX_REPORT;
-        
-        // if (isBanned) {
-        //     console.log(`[server] MAX_REPORT 초과 유저(IP: ${partnerIP})는 더 이상 nulm을 이용할 수 없습니다. REPORT: ${reportCount}`);
-        //     res.redirect('reportUser.html');
-        //     return;
-        // }
+        const isBanned = reportCount >= MAX_REPORT;
 
         // 현재 채팅방 가져오기
         const chatRoom = activeChats.get(roomId);
@@ -106,7 +99,6 @@ app.post('/chat/report', express.json(), async (req, res) => {
                 console.error(`[server] 소켓연결오류`);
                 return;
             }
-            
             await handleReport(roomId, reporterSocket, reportedSocket, reasons);
         }
 
