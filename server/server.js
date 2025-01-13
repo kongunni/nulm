@@ -33,21 +33,6 @@ app.use('/node_modules', express.static(path.join(__dirname, '../node_modules'),
 app.use(express.static(path.join(__dirname, '../public')));
 app.use(express.json()); // JSON 데이터 파싱을 위한 미들웨어
 
-// Redis 연동 테스트
-// app.get('/test', async (req, res) => {
-//     try {
-//         // Redis에 데이터 저장
-//         await redisClient.set('testKey', 'testValue');
-//         const value = await redisClient.get('testKey');
-
-//         res.send({ success: true, value }); // Redis에서 가져온 값 반환
-//     } catch (err) {
-//         console.error('Redis error:', err);
-//         res.status(500).send({ success: false, error: err.message });
-//     }
-// });
-
-
 /*
  * 신고 처리 API: 클라이언트가 신고 데이터를 전송하면 이를 처리
  */
@@ -73,12 +58,12 @@ app.post('/chat/report', express.json(), async (req, res) => {
     try {
         const reportKey = `banned:${partnerIP}`;
         const timestamp = moment().tz("Asia/Seoul").format("YY-MM-DD HH:mm:ss");
-       
-       const keyTypes = await redisClient.type(reportKey);
-       if (keyTypes !== 'hash' && keyTypes !== 'none') {
-        console.error(`[server] Redis 키 타입이 올바르지 않습니다: ${keyType}. 키를 초기화합니다.`);
-        await redisClient.del(reportKey); // 잘못된 타입의 키 삭제
-       }
+        
+        const keyType = await redisClient.type(reportKey);
+        if (keyType !== 'hash' && keyType !== 'none') {
+            console.error(`[server] Redis 키 타입이 올바르지 않습니다: ${keyType}. 키를 초기화합니다.`);
+            await redisClient.del(reportKey); // 잘못된 타입의 키 삭제
+        }
        
         // 기존 데이터 가져오기
         const currentData = await redisClient.hgetall(reportKey);
@@ -92,12 +77,6 @@ app.post('/chat/report', express.json(), async (req, res) => {
             timestamp: timestamp,
         };
         currentHistory.push(newReport);
-     
-        const keyType = await redisClient.type(reportKey);
-        if (keyType !== 'hash' && keyType !== 'none') {
-            console.error(`[server] Redis 키 타입이 올바르지 않습니다: ${keyType}. 키를 초기화합니다.`);
-            await redisClient.del(reportKey); // 잘못된 타입의 키 삭제
-        }
 
         await redisClient.hset(reportKey, {
             reportCount: reportCount.toString(),
@@ -105,25 +84,21 @@ app.post('/chat/report', express.json(), async (req, res) => {
             history: JSON.stringify(currentHistory),
         });
 
-
-
         // MAX_REPORT 초과 여부 확인
         const isBanned = reportCount >= MAX_REPORT;
         
         if (isBanned) {
-            // console.log(`[server] MAX_REPORT 초과 유저(IP: ${partnerIP})는 더 이상 nulm을 이용할 수 없습니다. REPORT: ${reportCount}`);
+            console.log(`[server] MAX_REPORT 초과 유저(IP: ${partnerIP})는 더 이상 nulm을 이용할 수 없습니다. REPORT: ${reportCount}`);
             res.redirect('reportUser.html');
+            return;
         }
 
         // 현재 채팅방 가져오기
         const chatRoom = activeChats.get(roomId);
         if (chatRoom && chatRoom.users.length === 2 ) {
-        // if (chatRoom) {
             const [user1, user2] = chatRoom.users;
-            // 신고자와 신고대상 구분
             const reporterSocket = user1.id === req.body.reporterId ? user1.socket : user2.socket;
             const reportedSocket = user1.id === req.body.reporterId ? user2.socket : user1.socket;
-            
             await handleReport(roomId, reporterSocket, reportedSocket, reasons);
         }
 
@@ -133,7 +108,6 @@ app.post('/chat/report', express.json(), async (req, res) => {
             reportCount: reportCount,
             banned: isBanned,
         });
-
     } catch (error) {
         console.error(`[server] 신고 처리 중 오류 발생: ${error.message}`);
         res.status(500).send({ success: false, message: '신고 처리 중 오류가 발생했습니다.' });
