@@ -15,8 +15,8 @@ const io = new Server(server);
 // 데이터 저장소 redis 설정 port: 6379
 
 // 채팅 로깅
-import axios from 'axios'; 
-import fs from 'fs-extra';
+// import axios from 'axios'; 
+// import fs from 'fs-extra';
 import { saveChatLog } from '../utils/chatLogger.js';
 const LOGGER_SERVER_URL = 'http://localhost:4000/log'; // 로깅 서버 URL
 
@@ -38,6 +38,7 @@ app.use(express.json()); // JSON 데이터 파싱을 위한 미들웨어
  */
 
 const MAX_REPORT = 3; // 최대 리포트 수 
+
 app.post('/chat/report', express.json(), async (req, res) => {
     const { roomId, partnerNickname, partnerIP, reasons } = req.body;
 
@@ -61,7 +62,7 @@ app.post('/chat/report', express.json(), async (req, res) => {
         
         const keyType = await redisClient.type(reportKey);
         if (keyType !== 'hash' && keyType !== 'none') {
-            console.error(`[server] Redis 키 타입이 올바르지 않습니다: ${keyType}. 키를 초기화합니다.`);
+            console.error(`[server] Redis 키 타입이 올바르지 않아 ${keyType}키를 초기화합니다.`);
             await redisClient.del(reportKey); // 잘못된 타입의 키 삭제
         }
        
@@ -85,13 +86,13 @@ app.post('/chat/report', express.json(), async (req, res) => {
         });
 
         // MAX_REPORT 초과 여부 확인
-        const isBanned = reportCount >= MAX_REPORT;
+        // const isBanned = reportCount >= MAX_REPORT;
         
-        if (isBanned) {
-            console.log(`[server] MAX_REPORT 초과 유저(IP: ${partnerIP})는 더 이상 nulm을 이용할 수 없습니다. REPORT: ${reportCount}`);
-            res.redirect('reportUser.html');
-            return;
-        }
+        // if (isBanned) {
+        //     console.log(`[server] MAX_REPORT 초과 유저(IP: ${partnerIP})는 더 이상 nulm을 이용할 수 없습니다. REPORT: ${reportCount}`);
+        //     res.redirect('reportUser.html');
+        //     return;
+        // }
 
         // 현재 채팅방 가져오기
         const chatRoom = activeChats.get(roomId);
@@ -99,6 +100,13 @@ app.post('/chat/report', express.json(), async (req, res) => {
             const [user1, user2] = chatRoom.users;
             const reporterSocket = user1.id === req.body.reporterId ? user1.socket : user2.socket;
             const reportedSocket = user1.id === req.body.reporterId ? user2.socket : user1.socket;
+            
+            // 소켓 연결 확인
+            if(!reporterSocket.connected || !reportedSocket.connected) {
+                console.error(`[server] 소켓연결오류`);
+                return;
+            }
+            
             await handleReport(roomId, reporterSocket, reportedSocket, reasons);
         }
 
@@ -124,21 +132,14 @@ async function handleReport(roomId, reporterSocket, reportedSocket, reasons) {
     try {
         const reportKey = `banned:${reportedIP}`;
         const currentReportData = await redisClient.hgetall(reportKey);
-       // let reportCount = currentReportData.reportCount ? parseInt(currentReportData.reportCount) : 0;
-       let reportCount = currentReportData?.reportCount ? parseInt(currentReportData.reportCount, 10) : 0;
+        let reportCount = currentReportData?.reportCount ? parseInt(currentReportData.reportCount, 10) : 0;
         // 신고 횟수 증가
         reportCount += 1;
-
-        // 기존 신고 사유와 새로운 사유 병합
-        // const updatedReasons = currentReportData.reason
-        //     ? `${currentReportData.reason}, ${reasons.join(', ')}`
-        //     : reasons.join(', ');
 
         const existingReasons = currentReportData?.reason
             ? currentReportData.reason.split(', ')
             : [];
         const updatedReasons = [...new Set([...existingReasons, ...reasons])].join(', ');
-
 
         // Redis에 업데이트
         await redisClient.hset(reportKey, {
@@ -152,8 +153,13 @@ async function handleReport(roomId, reporterSocket, reportedSocket, reasons) {
         const isBanned = reportCount >= MAX_REPORT;
 
         if (isBanned) { //리포트 수 넘은 사용자 연결종료
+            console.log(`[server] 신고된 사용자 차단 처리 - IP: ${reportedIP}, 신고 수: ${reportCount}`);
+            
+            reportedSocket.emit('max-report-redirect', {
+                message: '최대신고 횟수 초과'
+            });
+
             reportedSocket.disconnect();
-            //  console.log(`[server] 신고된 사용자 차단 처리 - IP: ${reportedIP}, 신고 수: ${reportCount}`);
         } else {
             reportedSocket.emit('chat-end', { // 신고대상
                 message: '연결이 종료되었습니다.',
@@ -452,35 +458,6 @@ io.on('connection', async (socket) => {
             }
         }
     }); 
-    // socket.on('session-action', (action) => {
-    //     const session = userSessions.get(socket.id);
-
-    //     if (!session) {
-    //         console.error(`[session-action] ${socket.id} not found`);
-    //     }
-
-
-    //     if (action === 'reset') {
-    //         if (session.timeout) {
-    //             clearTimeout(session.timeout);
-    //         }
-    //         session.background=false;
-    //         initializeSession(socket);
-    //         console.log(`[server] ${socket.id} session reset.`);
-    //     } else if (action === 'background') {
-    //         if (session.timeout) {
-    //             clearTimeout(session.timeout);
-    //         }
-    //         // clearTimeout(session.timeout);
-    //         session.background = true;
-
-    //         //handleSessionTimeout(socket);
-    //         session.timeout = setTimeout(() => handleSessionTimeout(socket), SESSION_DURATION);
-    //         userSessions.set(socket.id, session);
-
-    //         console.log(`[server] ${socket.id} set to background with timeout of ${SESSION_DURATION / 1000}s.`)
-    //     }
-    // });
 
     // 재연결 (restartBtn 클릭 이벤트 처리)
     socket.on('restart-connect', () => {

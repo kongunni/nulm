@@ -367,6 +367,12 @@
             console.log(`[client] 현재 접속자: ${myNickname}`);
         });
 
+        // max_report 초과 대상 접속 불가처리
+        socket.on('max-report-redirect', (data) => {
+            console.log(data.message);
+            window.location.href = 'reportUser.html';
+        });
+
 
         // session - expired
         socket.on('session-expired', (data) => {
