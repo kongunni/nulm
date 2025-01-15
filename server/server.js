@@ -2,7 +2,7 @@ import express from 'express';
 import http from 'http';
 import { Server } from 'socket.io';
 import moment from 'moment-timezone';
-import Redis from 'ioredis';
+// import Redis from 'ioredis';
 import redisClient from '../utils/redis.js';
 // es module 환경에서 디렉토리 경로 가져오기
 import path, { normalize } from 'path';
@@ -18,6 +18,8 @@ const io = new Server(server);
 // import axios from 'axios'; 
 // import fs from 'fs-extra';
 import { saveChatLog } from '../utils/chatLogger.js';
+import { report } from 'process';
+// import { time } from 'console';
 const LOGGER_SERVER_URL = 'http://localhost:4000/log'; // 로깅 서버 URL
 
 // 정적 파일 경로 추가
@@ -37,238 +39,65 @@ app.use(express.json()); // JSON 데이터 파싱을 위한 미들웨어
  * 신고 처리 API: 클라이언트가 신고 데이터를 전송하면 이를 처리
  */
 
-const MAX_REPORT = 3; // 최대 리포트 수 
+app.get('/admin=:id&:password/reports', (req, res) => {
+    const { id, password } = req.params;
 
-app.post('/chat/report', express.json(), async (req, res) => {
-    const { roomId, partnerNickname, partnerIP, reasons, reporterIP } = req.body;
-
-    if (!roomId || !partnerNickname || !partnerIP || !reasons || !reporterIP) {
-        return res.status(400).send({ success: false, message: '신고 데이터가 올바르지 않습니다.' });
-    }
-    console.log(`[server] 신고 접수 - 닉네임: ${partnerNickname}, IP: ${partnerIP}, 사유: ${reasons.join(', ')}`);
-
-    const reasonMapping = {
-        "스팸": "spam", 
-        "비속어": "vulgarism", 
-        "금전요구": "bankFraud",
-        "기타": "etc"
+    if (id !== 'master' || password !== 'nulm1004') {
+        return res.status(403).send('잘못된 접근입니다.');
     }
 
-    const reasonsEng = reasons.map(reason => reasonMapping[reason] || "unknown");
-
-    try {
-        const reportKey = `banned:${partnerIP}`;
-        const timestamp = moment().tz("Asia/Seoul").format("YY-MM-DD HH:mm:ss");
-        
-        const keyType = await redisClient.type(reportKey);
-        if (keyType !== 'hash' && keyType !== 'none') {
-            console.error(`[server] Redis 키 타입이 올바르지 않아 ${keyType}키를 초기화합니다.`);
-            await redisClient.del(reportKey); // 잘못된 타입의 키 삭제
-        }
-       
-        // 기존 데이터 가져오기
-        const currentData = await redisClient.hgetall(reportKey);
-        const currentHistory = currentData.history ? JSON.parse(currentData.history) : [];
-        const reportCount = (currentData.reportCount ? parseInt(currentData.reportCount) : 0) + 1;
-       
-        // 새로운 신고 정보 추가
-        const newReport = {
-            nickname: partnerNickname || "Unknown",
-            reason: reasonsEng.join(', '),
-            timestamp: timestamp,
-        };
-        currentHistory.push(newReport);
-
-        await redisClient.hset(reportKey, {
-            reportCount: reportCount.toString(),
-            userIP: partnerIP,
-            history: JSON.stringify(currentHistory),
-        });
-
-        const isBanned = reportCount >= MAX_REPORT;
-
-        // 현재 채팅방 가져오기
-        const chatRoom = activeChats.get(roomId);
-        if (chatRoom && chatRoom.users.length === 2 ) {
-            const [user1, user2] = chatRoom.users;
-            const reporterSocket = user1.id === req.body.reporterId ? user1.socket : user2.socket;
-            const reportedSocket = user1.id === req.body.reporterId ? user2.socket : user1.socket;
-            
-            // 소켓 연결 확인
-            if(!reporterSocket.connected || !reportedSocket.connected) {
-                console.error(`[server] 소켓연결오류`);
-                return;
-            }
-            await handleReport(roomId, reporterSocket, reportedSocket, reasons);
-        }
-
-        res.send({
-            success: true,
-            message: '신고가 접수되었습니다.',
-            reportCount: reportCount,
-            banned: isBanned,
-        });
-    } catch (error) {
-        console.error(`[server] 신고 처리 중 오류 발생: ${error.message}`);
-        res.status(500).send({ success: false, message: '신고 처리 중 오류가 발생했습니다.' });
-    }
+    // reportList.html 파일 경로를 제공
+    res.sendFile(path.join(__dirname, '../public', 'reportList.html'));
 });
-             
 
-async function handleReport(roomId, reporterSocket, reportedSocket, reasons) {
-    const reporterIP = reporterSocket.userIP; // 신고자
-    const reportedIP = reportedSocket.userIP; // 신고 대상
-    const reportedNickname = reportedSocket.nickname;
-    // console.log(`[server] report ${reporterIP}-> ${reportedNickname}[${reportedIP}]`);
 
-    try {
-        const reportKey = `banned:${reportedIP}`;
-        const currentReportData = await redisClient.hgetall(reportKey);
-        let reportCount = currentReportData?.reportCount ? parseInt(currentReportData.reportCount, 10) : 0;
-        // 신고 횟수 증가
-        reportCount += 1;
-
-        const existingReasons = currentReportData?.reason
-            ? currentReportData.reason.split(', ')
-            : [];
-        const updatedReasons = [...new Set([...existingReasons, ...reasons])].join(', ');
-
-        // Redis에 업데이트
-        await redisClient.hset(reportKey, {
-            reportCount: reportCount.toString(),
-            userIP: reportedIP,
-            nickname: reportedNickname,
-            reason: updatedReasons,
-            timestamp: new Date().toISOString(),
-        });
-
-        const isBanned = reportCount >= MAX_REPORT;
-
-        if (isBanned) { //리포트 수 넘은 사용자 연결종료
-            console.log(`[server] 신고된 사용자 차단 처리 - IP: ${reportedIP}, 신고 수: ${reportCount}`);
-            
-            reportedSocket.emit('max-report-redirect', {
-                message: '최대신고 횟수 초과'
-            });
-
-            reportedSocket.disconnect();
-        } else {
-            reportedSocket.emit('chat-end', { // 신고대상
-                message: '연결이 종료되었습니다.',
-                messageType: 'system',
-            });
+app.get('/api/reports', (req, res) => {
+    // redis 데이터 조회
+    redisClient.keys('reports:*', (err, keys) => {
+        if (err) {
+            console.error('[redis] 키 조회 오류: ', err);
+            return res.status(500).send('서버 오류');
         }
 
-        // 신고자
-        reporterSocket.emit('chat-end', {
-            message: '연결이 종료되었습니다.',
-            messageType: 'system',
+        const reports = [];
+        let processKeys = 0;
+
+        keys.forEach((key) => {
+            redisClient.lrange(key, 0, -1, (err, userReports) => {
+                if (err) {
+                    console.error('[redis] 리스트 조회오류:', err);
+                } else {
+                    userReports.forEach((report) => {
+                        const parsed = JSON.parse(report);
+                        const ip = key.split(':')[1];
+
+                        // 동일한 IP가 이미 있으면 정보 추가, 없으면 새로 추가
+                        const existingReport = reports.find(r => r.ip === ip);
+                        if (existingReport) {
+                            existingReport.roomId += `\n${parsed.roomId}`;
+                            existingReport.reason += `\n${parsed.reason}`;
+                            existingReport.time += `\n${parsed.time}`;
+                        } else {
+                            reports.push({
+                                ip: ip,
+                                roomId: parsed.roomId,
+                                reason: parsed.reason,
+                                time: parsed.time
+                            });
+                        }
+                    });
+                }  
+                processKeys++;
+                if (processKeys === keys.length) {
+                    res.json(reports);
+                }
+            });
         });
 
-        // 대기열 처리 및 새로운 매칭 시도
-        setTimeout(() => {
-            addToWaitingUsers(reporterSocket);
-            reporterSocket.emit('wait-state', {
-                message: '잠시만 기다려 주세요. \n 새로운 유저를 찾고 있습니다.',
-                messageType: 'system',
-            });
-
-            if (!isBanned) {
-                addToWaitingUsers(reportedSocket);
-                reportedSocket.emit('wait-state', {
-                    message: '잠시만 기다려 주세요. \n 새로운 유저를 찾고 있습니다.',
-                    messageType: 'system',
-                });
-            }
-            matchUsers();
-        }, 5000);
-
-    } catch (error) {
-        console.error(`[server] 신고 처리 중 오류 발생: ${error.message}`);
-    }
-}
-
-
-app.get('/admin/reports', async (req, res) => {
-    try {
-        const keys = await redisClient.keys('banned:*');
-        const groupedReports = {};
-
-        for (const key of keys) {
-            const currentData = await redisClient.hgetall(key);
-            const ip = currentData.userIP || key.split(':')[1];
-            const history = currentData.history ? JSON.parse(currentData.history) : [];
-
-            groupedReports[ip] = history.map((entry, index) => ({
-                nickname: entry.nickname || 'Unknown', // 닉네임 기본값 설정
-                reason: entry.reason || 'N/A',
-                timestamp: entry.timestamp || 'N/A',
-                count: index + 1,
-            }));
+        if(keys.length === 0) {
+            res.json([]);
         }
-
-        const html = `
-        <!DOCTYPE html>
-        <html lang="en">
-        <head>
-            <meta charset="UTF-8">
-            <meta name="viewport" content="width=device-width, initial-scale=1.0">
-            <title>Admin Reports</title>
-            <style>
-                table {
-                    width: 100%;
-                    border-collapse: collapse;
-                }
-                th, td {
-                    border: 1px solid #ddd;
-                    padding: 8px;
-                    text-align: left;
-                }
-                th {
-                    background-color: #f2f2f2;
-                }
-                .ip-cell {
-                    vertical-align: middle;
-                    text-align: center;
-                }
-            </style>
-        </head>
-        <body>
-            <h1>Reported Users</h1>
-            <table>
-                <thead>
-                    <tr>
-                        <th>IP</th>
-                        <th>Nickname</th>
-                        <th>Reason</th>
-                        <th>Timestamp</th>
-                        <th>Count</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    ${Object.entries(groupedReports)
-                        .map(([ip, reports]) => {
-                            return reports.map((report, index) => `
-                                <tr>
-                                    ${index === 0 ? `<td class="ip-cell" rowspan="${reports.length}">${ip}</td>` : ''}
-                                    <td>${report.nickname}</td>
-                                    <td>${report.reason}</td>
-                                    <td>${report.timestamp}</td>
-                                    <td>${report.count}</td>
-                                </tr>
-                            `).join('');
-                        }).join('')}
-                </tbody>
-            </table>
-        </body>
-        </html>
-        `;
-
-        res.send(html);
-    } catch (error) {
-        console.error('[server] Admin report page error:', error.message);
-        res.status(500).send('Internal Server Error');
-    }
+    });
 });
 
 
@@ -277,13 +106,9 @@ server.listen(3000, () => {
     console.log('Server is running on http://localhost:3000');
 });
 
-/*
- * start
-*/ 
-
-// 변수
 const waitingUsers = new Map(); //대기열 관리
 const activeChats = new Map(); //활성채팅
+const MAX_REPORT = 3; // 최대 리포트 수 
 
 // 세션 타임아웃 설정
 // const SESSION_DURATION = 1 * 60 * 1000; //test time 
@@ -293,17 +118,14 @@ const userSessions = new Map(); // 사용자 세션 상태 관리
 
 // IPv4 반환
 function normalizeIP(ip) {
-    // "::1" (IPv6 localhost) 변환
+    // (IPv6 localhost) 변환
     if (ip === "::1") {
         return "127.0.0.1";
     }
-
     // IPv6에서 IPv4 주소 추출
     if (ip.startsWith("::ffff:")) {
         return ip.replace("::ffff:", "");
     }
-
-    // 이미 IPv4 형식이면 그대로 반환
     return ip;
 }
 
@@ -315,7 +137,6 @@ io.on('connection', async (socket) => {
 
         if(!socket.entered) {
             socket.entered = true; // 버튼을 눌렀을때만 상태변경 
-            // console.log('[server] client clicked enter-btn');
             // 유저
             socket.userIP = normalizeIP(socket.handshake.address); // IPv4형식으로 반환
             socket.nickname = `User_${Math.floor(Math.random() * 1000)}`;
@@ -342,19 +163,9 @@ io.on('connection', async (socket) => {
                 console.log(`  Timeout: ${session.timeout}`);
             }
 
-             /* 차단된 계정 접근 불가 */
-            try {
-                // 차단된 유저인지 확인
-                const reportCount = await redisClient.get(`banned:${socket.userIP}`);
-                if (reportCount && parseInt(reportCount) >= MAX_REPORT) {
-                    console.log(`[server] banned: IP:${socket.userIP}] - 리포트 수: ${reportCount}`);
-                    socket.emit('ban', { message: '서비스 이용 제한된 사용자입니다. 관리자에게 문의해 주세요.' });
-                    socket.disconnect();
-                    return;
-                }
-            } catch (error) {
-                console.error(`[server] Redis 오류: ${error.message}`);
-            }
+            
+
+
             addToWaitingUsers(socket); //대기열 추가
 
             // 대기 상태 메시지 전송
@@ -425,7 +236,6 @@ io.on('connection', async (socket) => {
         }
     });
 
-
     // 세션 상태에 따른 처리
     socket.on('session-action', (action) => {
         const session = userSessions.get(socket.id);
@@ -490,30 +300,11 @@ io.on('connection', async (socket) => {
         }, 5000); //5초후 재연결 시도
     });
 
-    // 신고 종료
-    socket.on('report-disconnected', async ({ roomId }) => {
-       
-        const chatRoom = getChatRoomByUser(socket.id);
-        if (!chatRoom) {
-            socket.emit('system-message', { message: '신고 처리를 진행할 방이 없습니다.', messageType: 'error' });
-            return;
-        }
-
-        const { room } = chatRoom;
-        const partner = room.users.find((user) => user.id !== socket.id);
-
-        if (!partner) {
-            socket.emit('system-message', { message: '상대방 정보를 찾을 수 없습니다.', messageType: 'error' });
-            return;
-        }
-        // 신고 처리
-        handleReport(chatRoom.roomId, socket, partner.socket);
-    });
-
     // 연결 종료 (시스템/네트워크 종료시) 
     socket.on('disconnect', ()=>{
         console.log(`[server] ${socket.nickname}[${socket.userIP}]서버 연결 종료.`);
         if (userSessions.has(socket.id)) {
+            // io.emit('server-disconnect', { message: '상대방이 연결을 종료했습니다.' });
             handleDisconnection(socket.id);
             userSessions.delete(socket.id);
         } else {
@@ -526,6 +317,65 @@ io.on('connection', async (socket) => {
         console.log(`[server] ${socket.nickname}[${socket.userIP}]유저요청 연결 종료. `);
         handleDisconnection(socket.id);
     });
+
+    // 연결 종료 (신고)
+    socket.on('report-disconnect', (reportData) => {
+        const { reporter, partner, reason, roomId } = reportData;
+
+        const partnerSocket = io.sockets.sockets.get(partner.id);
+        const partnerIP = partnerSocket ? partnerSocket.userIP : 'unknown';
+        
+        const reporterSocket = io.sockets.sockets.get(reporter.id);
+        const reporterIP = reporterSocket.userIP || 'unknown';
+
+        console.log(`[server] ${reporterIP}님이 ${partnerIP}님을 신고: `, reason);
+
+        saveReport(partnerIP, reason, roomId);
+
+        // MAX_REPORT 확인
+        checkMaxReports(partnerIP, (isMaxReportExceeded) => {
+            if (isMaxReportExceeded) {
+                partnerSocket.emit('report-redirect', { message: `${partnerIP}님은 신고 한도를 초과하여 접근이 제한됩니다. `});
+                // 연결종료 //세션삭제
+                partnerSocket.disconnect(true); 
+                
+            } else {
+                setTimeout(() => {
+                    addToWaitingUsers(partnerSocket);
+                    console.log(`[server] ${partnerIP}님을 3초후 대기열에 추가합니다.`);
+                    matchUsers();
+                }, 3000);
+            }
+        });
+        
+        // 신고자 메시지 처리
+        reporterSocket.emit('chat-end', {
+            message: '신고가 접수되어 연결을 종료합니다.',
+            messageType: 'system'
+        });
+        reporterSocket.disconnect(true); 
+        
+        // 신고 대상 메시지 처리
+        if (partnerSocket) {
+            partnerSocket.emit('chat-end', {
+                message: '신고로 인해 연결이 종료되었습니다.',
+                messageType: 'system',
+            });
+            partnerSocket.disconnect(true);
+
+        }
+        
+        // 신고자 대기열 추가 및 즉시 매칭
+        addToWaitingUsers(reporterSocket);
+        console.log(`[server] ${reporterSocket.userIP}님을 대기열에 즉시 추가합니다.`);
+        matchUsers();
+
+
+        // 서버 응답 전송
+        reporterSocket.emit('report-response', { success: true, message: '신고가 처리되었습니다.' });
+      
+    })
+
 
 
 }); /* io.on connection */
@@ -616,6 +466,32 @@ async function handleSessionTimeout(socket){
         });
         socket.disconnect(true);
     }
+}
+
+// 신고 데이터 저장
+function saveReport(userIP, reason, roomId) {
+    const timestamp = moment().format('YY-MM-DD HH:mm:ss');
+    const reportData = { userIP, reason, roomId, time: timestamp };
+
+    redisClient.lpush( `reports: ${userIP}`, JSON.stringify(reportData), (err)=> {
+        if(err) {
+            console.error('[server] 신고데이터 저장 오류: ', err);
+        } else {
+            console.log('[server] 신고 데이터 저장: ', reportData);
+        }
+    });
+}
+
+// 신고 - MAX_REPORT 초과 확인
+function checkMaxReports(userIP, callback) {
+    redisClient.llen(`report: ${userIP}`, (err, count)=>{
+        if (err) {
+            console.error('[redis] 조회 오류:', err);
+            callback(false);
+        } else {
+            callback(count >= MAX_REPORT);
+        }
+    });
 }
 
 // 대기열 관리

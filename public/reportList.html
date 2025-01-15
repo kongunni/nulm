@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>신고 목록</title>
+    <style>
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+        }
+        th {
+            background-color: #f2f2f2;
+        }
+    </style>
+</head>
+<body>
+    <h1>신고 목록</h1>
+    <table id="reportTable">
+        <thead>
+            <tr>
+                <th>신고대상IP</th>
+                <th>채팅방</th>
+                <th>사유</th>
+                <th>날짜</th>
+            </tr>
+        </thead>
+        <tbody id="reportBody">
+            <!-- 동적으로 데이터가 추가될 부분 -->
+        </tbody>
+    </table>
+    <script>
+        // 서버에서 JSON 데이터를 받아오기
+        fetch('/api/reports')
+            .then(response => response.json())
+            .then(data => {
+                const tableBody = document.getElementById('reportBody');
+                
+                data.forEach(report => {
+                    const row = document.createElement('tr');
+    
+                    // IP 추가
+                    const ipCell = document.createElement('td');
+                    ipCell.textContent = report.ip;
+                    row.appendChild(ipCell);
+    
+                    // 채팅방 정보 추가
+                    const roomIdCell = document.createElement('td');
+                    roomIdCell.innerHTML = report.roomId.replace(/\n/g, '<br>'); // 줄바꿈 <br> 처리
+                    row.appendChild(roomIdCell);
+    
+                    // 사유 정보 추가
+                    const reasonCell = document.createElement('td');
+                    reasonCell.innerHTML = report.reason.replace(/\n/g, '<br>'); // 줄바꿈 <br> 처리
+                    row.appendChild(reasonCell);
+    
+                    // 날짜 정보 추가
+                    const timeCell = document.createElement('td');
+                    timeCell.innerHTML = report.time.replace(/\n/g, '<br>'); // 줄바꿈 <br> 처리
+                    row.appendChild(timeCell);
+    
+                    // 테이블에 행 추가
+                    tableBody.appendChild(row);
+                });
+            })
+            .catch(error => {
+                console.error('Error fetching report data:', error);
+            });
+    </script>
+    
+</body>
+</html>

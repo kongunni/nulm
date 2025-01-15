@@ -63,10 +63,10 @@
                         </div>
                         <div id="modal-section">
                             <form id="reportForm">
-                                <label><input type="checkbox" name="reason" value="스팸">스     팸</label>
-                                <label><input type="checkbox" name="reason" value="비속어">비 속 어</label>
-                                <label><input type="checkbox" name="reason" value="금전요구">금전요구</label>
-                                <label><input type="checkbox" name="reason" value="기타" >기     타</label>
+                                <label><input type="checkbox" name="reason" value="spam">스     팸</label>
+                                <label><input type="checkbox" name="reason" value="profanity">비 속 어</label>
+                                <label><input type="checkbox" name="reason" value="scam">금전요구</label>
+                                <label><input type="checkbox" name="reason" value="etc" >기     타</label>
                                 <div class="reportBtn">
                                     <button id="reportSubmitBtn" class="report-form-btn" type="button" onclick="submitReport()">report</button>
                                     <button id="reportCancelBtn" class="report-form-btn" type="button" onclick="closeReportModal()">cancel</button>
@@ -117,6 +117,8 @@
     let socket;
     let roomId; 
     let partnerNickname;
+    let partner;
+    // let parnter;
 
     // hamburger menu
     function toggleMenu() {
@@ -154,63 +156,96 @@
         resetReportModal();
     }
 
+    // report - submit
+    function submitReport() {
+        const reportForm = document.getElementById('reportForm');
+        const selectedReason = Array.from(reportForm.querySelectorAll('input[name="reason"]:checked')).map(input => input.value);
+        
+        if (selectedReason.length === 0) {
+            alert('신고 사유를 선택해 주세요.');
+            return;
+        }
+
+        if (!partner || !partner.id) {
+            alert('상대방 정보가 올바르지 않습니다. 다시 시도해 주세요.');
+            return;
+        }
+        
+        const reportData = {
+            reporter: { id: socket.id }, // 신고자 정보
+            partner: { id: partner.id, userIP: partner.userIP }, // 신고 대상 정보
+            reason: selectedReason, // 신고 사유
+            roomId: roomId // 현재 채팅방 ID
+        };
+
+        // 신고 데이터 서버전송
+        socket.emit('report-disconnect', reportData);
+        
+       
+        // 서버 응답 처리
+        // closeReportModal();
+    }
+
+
+
 
     //report submit
-     function submitReport() {
-            const reportForm = document.getElementById('reportForm');
-            const reasons = Array.from(reportForm.querySelectorAll('input[name="reason"]:checked')).map(input => input.value);
+    //  function submitReport() {
+    //         const reportForm = document.getElementById('reportForm');
+    //         const reasons = Array.from(reportForm.querySelectorAll('input[name="reason"]:checked')).map(input => input.value);
             
-            if(reasons.length === 0) {
-                alert('신고 사유를 선택해 주세요. ');
-                return;
-            }
+    //         if(reasons.length === 0) {
+    //             alert('신고 사유를 선택해 주세요. ');
+    //             return;
+    //         }
 
-            console.log('roomId: ', roomId, 'partner: ', partnerNickname, '[IP:', partnerIP , ']', 'reason: ', reasons);
+    //         console.log('roomId: ', roomId, 'partner: ', partnerNickname, '[IP:', partnerIP , ']', 'reason: ', reasons);
             
-            if (!roomId || !partnerNickname || !partnerIP) {
-                alert('잘못된 요청입니다. 다시 시도해 주세요. ');
-                return;
-            }
+    //         if (!roomId || !partnerNickname || !partnerIP) {
+    //             alert('잘못된 요청입니다. 다시 시도해 주세요. ');
+    //             return;
+    //         }
 
-            fetch('/chat/report', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    reasons,
-                    roomId,
-                    partnerNickname,
-                    partnerIP,
-                    reporterId: socket.id //신고자 socketId
-                })
-            })
-            .then(response => {
-                if (!response.ok) throw new Error(`HTTP error: ${response.status}`);
-                return response.json();
-            })
-            .then(data => {
-                alert(data.message); // 서버 응답 처리
-                console.log('[client] server repsponse data: ', data);
-                if (socket && roomId) {
-                    console.log('[client] Calling socket.emit for report-disconnected...');
-                    socket.emit('report-disconnected', { roomId });
-                }
-                closeReportModal();
-            })
-            .catch(err => {
-                console.error('Error reporting user:', err);
-                alert('신고 처리 중 오류가 발생했습니다.');
-            })
-            .finally(()=>{
-                resetReportModal();
-            });
-        }
+    //         fetch('/chat/report', {
+    //             method: 'POST',
+    //             headers: { 'Content-Type': 'application/json' },
+    //             body: JSON.stringify({
+    //                 reasons,
+    //                 roomId,
+    //                 partnerNickname,
+    //                 partnerIP,
+    //                 reporterId: socket.id //신고자 socketId
+    //             })
+    //         })
+    //         .then(response => {
+    //             if (!response.ok) throw new Error(`HTTP error: ${response.status}`);
+    //             return response.json();
+    //         })
+    //         .then(data => {
+    //             alert(data.message); // 서버 응답 처리
+    //             console.log('[client] server repsponse data: ', data);
+    //             if (socket && roomId) {
+    //                 console.log('[client] Calling socket.emit for report-disconnected...');
+    //                 socket.emit('report-disconnected', { roomId });
+    //             }
+    //             closeReportModal();
+    //         })
+    //         .catch(err => {
+    //             console.error('Error reporting user:', err);
+    //             alert('신고 처리 중 오류가 발생했습니다.');
+    //         })
+    //         .finally(()=>{
+    //             resetReportModal();
+    //         });
+    //     }
 
 
 
     
     /* 채팅 클라이언트 */
     document.addEventListener('DOMContentLoaded', function() {
-        const socket = io();
+        // const socket = io();
+        socket = io();
 
         const chatButtonContainer = document.getElementById('chatButtonContainer'); 
         const chatBox = document.getElementById('chatBox');
@@ -225,7 +260,7 @@
         let myNickname = ''; // 내 닉네임 저장 변수
         let chatStarted = false; // 채팅 시작상태
         let isProcessing = false; // 중복 입력 방지를 위한 플래그 변수
-
+        
         if (!messageInput) {
             console.error('<input id="message"> not found after DOMContentLoaded');
         }
@@ -367,10 +402,21 @@
         });
 
         // max_report 초과 대상 접속 불가처리
-        socket.on('max-report-redirect', (data) => {
+        socket.on('report-redirect', (data) => {
             console.log(data.message);
             window.location.href = 'reportUser.html';
         });
+
+        //신고처리
+        socket.on('report-response', (data) => {
+            if (data.success) {
+                alert(data.message);
+            } else {
+                alert('신고 처리 중 오류가 발생했습니다.');
+            }
+            closeReportModal();
+        });
+        
 
 
         // session - expired
@@ -440,10 +486,11 @@
         // 채팅 준비 완료 시 상대방 닉네임 표시
         socket.on('chat-ready', (data) => {
             // 상대방 정보 표시
-            const partner = data.users.find(user => user.id !== socket.id);
+            partner = data.users.find(user => user.id !== socket.id);
             roomId= data.roomId;
             partnerNickname = partner.nickname;
             partnerIP = partner.userIP;
+            
 
             const inputBox = document.getElementById('inputBox');
             if (inputBox) {
@@ -462,8 +509,6 @@
             chatHeader.appendChild(reportBtn);  // 닉네임 옆에 버튼 추가
 
             appendMessages(data.message, data.messageType);
-
-
         });
 
         socket.on('warning-message', (data) => {
@@ -488,7 +533,8 @@
         });
 
         // 서버 연결 종료 감지
-        socket.on('disconnect', () => {
+        // socket.on('disconnect', () => {
+        socket.on('server-disconnect', () => {
             console.log('[client] 서버와 연결이 종료되었습니다.');
 
             // 시스템 메시지 추가
