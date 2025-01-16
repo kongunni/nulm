@@ -164,6 +164,7 @@ function normalizeIP(ip) {
     if (!ip) return null;
 
     const processedIP = String(ip).split(',')[0].trim();
+    console.log(`[normalizeIP] Processed IP:`, processedIP);
 
     // (IPv6 localhost) 변환
     if (processedIP === "::1") {
@@ -189,10 +190,11 @@ io.on('connection', async (socket) => {
             socket.entered = true; // 버튼을 눌렀을때만 상태변경 
             
             const rawIP = socket.handshake.headers['x-forwarded-for'] || socket.handshake.address;
+            console.log(`[debug] Raw IP received:`, rawIP); // 원본 IP 로그
             const userIP = normalizeIP(rawIP);
             // const userIP = normalizeIP(socket.handshake.address);
-            console.log(`[server] Raw IP: ${rawIP}, Normalized IP: ${userIP}`)
-
+            console.log(`[debug] Normalized IP:`, userIP); // 처리된 IP 로그
+            
             isBlocked(userIP, async (blocked) => {
                 if (blocked) {
                     console.log(`[server] 차단된 IP ${userIP} 접속 불가`);
