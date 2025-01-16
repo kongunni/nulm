@@ -214,6 +214,12 @@
             }
         });
 
+        // 백그라운드
+        socket.on('session-background', (data) => {
+            console.log(`[client] 세션이 백그라운드로 전환되었습니다. TTL: ${data.ttl}s`);
+        });
+
+
         const chatButtonContainer = document.getElementById('chatButtonContainer'); 
         const chatBox = document.getElementById('chatBox');
         const enterBtn = document.getElementById('enterBtn');
@@ -272,12 +278,15 @@
 
             if (document.visibilityState === 'visible') {
                 console.log('[client] Tab returned to foreground. Reset session.');
+                // socket.connect();
                 socket.emit('session-action', 'reset');
             } else if (document.visibilityState === 'hidden') {
                 console.log('[client] Tab moved to background.');
                 socket.emit('session-action', 'background');
             }
         });
+
+
 
         // chat-notification
         const notificationBox = document.getElementById('notificationBox');
@@ -531,12 +540,28 @@
         });
 
         // 서버 연결 종료 감지
-        socket.on('server-disconnect', () => {
-            console.log('[client] 서버와 연결이 종료되었습니다.');
-            // 시스템 메시지 추가
-            appendMessages(data.message, 'system');
-            resetChatUI(true);
-            localStorage.removeItem('sessionId');
+        socket.on('disconnect', () => {
+            // console.log('[client] 서버와 연결이 종료되었습니다.');
+            // // 시스템 메시지 추가
+            // appendMessages(data.message, 'system');
+            // resetChatUI(true);
+            // localStorage.removeItem('sessionId');
+            console.log('[client] 서버와 연결이 끊겼습니다. 재연결 시도 중...');
+            let reconnectAttempts = 0;
+
+            const attemptReconnect = setInterval(() => {
+                if (reconnectAttempts >= 5) { // 최대 5번 재시도
+                    clearInterval(attemptReconnect);
+                    console.warn('[client] 재연결 실패. UI 초기화 진행.');
+                    appendMessages('서버와 연결이 종료되었습니다.', 'system');
+                    resetChatUI(true);
+                    localStorage.removeItem('sessionId');
+                } else {
+                    console.log(`[client] 재연결 시도 (${reconnectAttempts + 1}/5)`);
+                    socket.connect();
+                    reconnectAttempts++;
+                }
+            }, 1000); // 1초 간격으로 재연결 시도
         });
 
         // 상대방의 요청으로 채팅 종료

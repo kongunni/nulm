@@ -303,21 +303,23 @@ io.on('connection', async (socket) => {
         const sessionId = socket.handshake.query.sessionId;
         const sessionData = await getSession(sessionId);
     
+        if (!sessionId) return;
         if (!sessionData) {
             console.warn(`[server] 세션 데이터 없음: ${sessionId}`);
             return;
         }
 
         if (action === 'reset') {
+            sessionData.background = false;
             sessionData.lastActivity = Date.now(); // 활동 시간 갱신
-            await saveSession(sessionId, sessionData);
-            console.log(`[server] 세션이 리셋되었습니다: ${sessionId}`);
+            await saveSession(sessionId, sessionData, 10800);
+            console.log(`[server] 세션이 활성 상태로 복귀: ${sessionId}`);
         } else if (action === 'background') {
             // 백그라운드 상태로 전환
-            sessionData.lastActivity = Date.now(); // 활동 시간 갱신
-            sessionData.background = true; // 백그라운드 상태 플래그 추가
-            await saveSession(sessionId, sessionData);
+            sessionData.background = true;
+            await saveSession(sessionId, sessionData, 10800); // 3시간 TTL
             console.log(`[server] 세션이 백그라운드 상태로 전환되었습니다: ${sessionId}`);
+            socket.emit('session-background', { ttl: 10800 });
         }
     }); 
 
@@ -361,13 +363,13 @@ io.on('connection', async (socket) => {
         if (sessionId) {
             const sessionData = await getSession(sessionId);
             if (sessionData) {
-                sessionData.disconnectedAt = Date.now(); // 연결 종료 시각 저장
-                sessionData.background = true; // 백그라운드 상태로 설정
-                await saveSession(sessionId, sessionData);
+                sessionData.disconnectedAt = Date.now(); // 연결 해제 시간 기록
+                await saveSession(sessionId, sessionData); 
                 console.log(`[redis] 세션 일시 중단: ${sessionId}`);
+            } else {
+                console.warn(`[redis] 세션이 존재하지 않음. 처리 스킵: ${sessionId}`);
             }
         }
-
         await handleDisconnection(socket.id);
         console.log(`[redis] 연결종료 처리 완료:${socket.id}`);
     });
@@ -499,7 +501,7 @@ async function handleUserConnection(socket, userIP) {
 
 // redis - 세션 저장
 async function saveSession(sessionId, sessionData) {
-    const ttl = sessionData.background ? 10800 : 10800; //백그라운드:포그라운드
+    const ttl = sessionData.background ? 3 * 60 * 60 : 3 * 60 * 60;  //백그라운드:포그라운드
     await redisClient.set(
         `session:${sessionId}`,
         JSON.stringify(sessionData),
