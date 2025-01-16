@@ -508,6 +508,7 @@
             
             if (data.isSelf) {
                 resetChatUI(true);
+                localStorage.removeItem('sessionId');
             } else {
                 if (chatHeader) {
                     chatHeader.textContent = ''; // 닉네임 제거
@@ -525,6 +526,7 @@
             // 시스템 메시지 추가
             appendMessages(data.message, 'system');
             resetChatUI(true);
+            localStorage.removeItem('sessionId');
         });
 
         // 상대방의 요청으로 채팅 종료
@@ -533,6 +535,7 @@
             
             if (data.isSelf) {
                 resetChatUI(true);
+                localStorage.removeItem('sessionId');
             } else {
                 if (chatHeader) {
                     chatHeader.textContent = ''; // 닉네임 제거

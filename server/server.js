@@ -337,11 +337,8 @@ io.on('connection', async (socket) => {
     // 연결 종료 (시스템/네트워크 종료시) 
     socket.on('disconnect', async()=>{
         // console.log(`[server] ${socket.nickname}[${socket.userIP}]서버 연결 종료.`);
-        const sessionId = socket.handshake.query.sessionId;
-        if (sessionId) {
-            await deleteSession(sessionId);
-            console.log(`[redis] sessionId:${sessionId} 삭제`);
-        }
+        await handleDisconnection(socket.id);
+        console.log(`[redis] 연결종료 처리 완료:${socket.id}`);
     });
 
     // 연결 종료 (유저 요청)
