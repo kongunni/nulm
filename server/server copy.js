@@ -193,7 +193,7 @@ io.on('connection', async (socket) => {
             // const userIP = normalizeIP(socket.handshake.address);
             console.log(`[server] Raw IP: ${rawIP}, Normalized IP: ${userIP}`)
 
-            isBlocked(userIP, async (blocked) => {
+            isBlocked(userIP, (blocked) => {
                 if (blocked) {
                     console.log(`[server] 차단된 IP ${userIP} 접속 불가`);
                     socket.emit('connection-rejected', {
@@ -201,33 +201,6 @@ io.on('connection', async (socket) => {
                     });
                     socket.disconnect(true); 
                 } else {
-                    /**/
-                    // redis 세션 생성
-                    let sessionId = socket.handshake.query.sessionId;
-                    let sessionData;
-
-                    if (sessionId) {
-                        sessionData = await getSession(sessionId);
-                        if (sessionData) {
-                            console.log(`[server] 세션 복원 성공: ${sessionId}`);
-                        } else {
-                            console.log(`[server] 세션이 만료되었습니다. 새로운 세션 생성.`);
-                            sessionId = null; // 세션 ID 초기화
-                        }
-                    }
-
-                    if (!sessionId) {
-                        sessionId = `${userIP}-${Date.now()}`; // 새 세션 ID 생성 (IP 기반)
-                        sessionData = { userIP, createdAt: new Date() }; // 기본 세션 데이터
-                        await saveSession(sessionId, sessionData);
-                        console.log(`[server] 새로운 세션 생성: ${sessionId}`);
-                    }
-
-                    // 클라이언트로 세션 ID 전송
-                    socket.emit('session-id', { sessionId });
-
-
-                    /**/
                     console.log(`[server] 새로운 사용자 ${userIP} 접속`);
                     
                     handleUserConnection(socket, userIP);
@@ -363,24 +336,15 @@ io.on('connection', async (socket) => {
     });
 
     // 연결 종료 (시스템/네트워크 종료시) 
-    socket.on('disconnect', async()=>{
+    socket.on('disconnect', ()=>{
         console.log(`[server] ${socket.nickname}[${socket.userIP}]서버 연결 종료.`);
-        
-        const sessionId = socket.handshake.query.sessionId;
-        if (sessionId) {
-            await deleteSession(sessionId);
+        if (userSessions.has(socket.id)) {
+            // io.emit('server-disconnect', { message: '상대방이 연결을 종료했습니다.' });
             handleDisconnection(socket.id);
             userSessions.delete(socket.id);
-            console.log(`[server] 세션 삭제 완료: ${sessionId}`);
+        } else {
+            console.log(`[server] Session for ${socket.id} already cleared.`);
         }
-        
-        // if (userSessions.has(socket.id)) {
-        //     // io.emit('server-disconnect', { message: '상대방이 연결을 종료했습니다.' });
-        //     handleDisconnection(socket.id);
-        //     userSessions.delete(socket.id);
-        // } else {
-        //     console.log(`[server] Session for ${socket.id} already cleared.`);
-        // }
     });
 
     // 연결 종료 (유저 요청)
@@ -492,26 +456,6 @@ function handleUserConnection(socket, userIP) {
     };
     userSessions.set(socket.id, session);
 }
-
-/*
- * redis 세션 처리
-*/
-
-// redis - 세션 저장
-async function saveSession(sessionId, sessionData) {
-    await redisClient.set(`session:${sessionId}`, JSON.stringify(sessionData), 'EX', 3600);
-}
-// redis - 세션 불러오기
-async function getSession(sessionId) {
-    const data = await redisClient.get(`session:${sessionId}`);
-    return data ? JSON.parse(data) : null;    
-}
-
-// redis - 세션 삭제
-async function name(params) {
-    await redisClient.del(`session:${sessionId}`);
-}
-
 
 // 세션 초기화
 function initializeSession(socket) {

@@ -186,8 +186,7 @@
 
     /* 채팅 클라이언트 */
     document.addEventListener('DOMContentLoaded', function() {
-        // const socket = io();
-        socket = io();
+        // socket = io();
 
         const chatButtonContainer = document.getElementById('chatButtonContainer'); 
         const chatBox = document.getElementById('chatBox');
@@ -202,11 +201,14 @@
         let myNickname = ''; // 내 닉네임 저장 변수
         let chatStarted = false; // 채팅 시작상태
         let isProcessing = false; // 중복 입력 방지를 위한 플래그 변수
-        
-        if (!messageInput) {
-            console.error('<input id="message"> not found after DOMContentLoaded');
-        }
+        let sessionId = localStorage.getItem('sessionId');
 
+        socket = io ({
+            query: {
+                sessionId,
+            },
+        });
+        
         // 채팅창 UI 초기화
         function resetChatUI( forced = false ) {
             
@@ -353,6 +355,14 @@
         */ 
         chatBox.style.display = 'none';
         enterBtn.style.display = 'block';
+
+        // 서버에서 새로운 세션id 수신 
+        socket.on('session-id', (data) => {
+            if (data.sessionId) {
+                sessionId = data.sessionId;
+                localStorage.setItem('sessionId', sessionId); // 세션 ID 저장
+            }
+        });
 
         // 서버에서 닉네임 초기화 이벤트 추가
         socket.on('set-nickname', (nickname) => {
