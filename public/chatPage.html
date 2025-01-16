@@ -428,11 +428,11 @@
             document.getElementById('messages').innerHTML = '';
 
             localStorage.removeItem('sessionId');
-            window.location.replace('chatPage.html');
-
-            setTimeout(() => {
-                alert(data.message || '세션이 만료되었습니다. 다시 접속해 주세요.');
-            }, 50);
+            // 3. 확인 후 페이지 이동
+            const userConfirmed = confirm(data.message || '세션이 만료되었습니다. 다시 접속해 주세요.');
+            if (userConfirmed) {
+                window.location.replace('chatPage.html');
+            }
         });
 
        // message 구분
