@@ -194,7 +194,7 @@ io.on('connection', async (socket) => {
             const userIP = normalizeIP(rawIP);
             // const userIP = normalizeIP(socket.handshake.address);
             console.log(`[debug] Normalized IP:`, userIP); // 처리된 IP 로그
-            
+
             isBlocked(userIP, async (blocked) => {
                 if (blocked) {
                     console.log(`[server] 차단된 IP ${userIP} 접속 불가`);
@@ -502,16 +502,19 @@ function handleUserConnection(socket, userIP) {
 // redis - 세션 저장
 async function saveSession(sessionId, sessionData) {
     await redisClient.set(`session:${sessionId}`, JSON.stringify(sessionData), 'EX', 3600);
+    console.log(`[redis] sessionId:${sessionId} 저장`);
 }
 // redis - 세션 불러오기
 async function getSession(sessionId) {
     const data = await redisClient.get(`session:${sessionId}`);
+    console.log(`[redis] sessionId:${sessionId} 불러오기`);
     return data ? JSON.parse(data) : null;    
 }
 
 // redis - 세션 삭제
-async function name(params) {
+async function deleteSession(sessionId) {
     await redisClient.del(`session:${sessionId}`);
+    console.log(`[redis] sessionId:${sessionId} 삭제`);
 }
 
 
