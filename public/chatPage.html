@@ -427,10 +427,11 @@
             document.getElementById('chatButtonContainer').style.display = 'flex';
             document.getElementById('messages').innerHTML = '';
 
+            localStorage.removeItem('sessionId');
+            window.location.replace('chatPage.html');
+
             setTimeout(() => {
                 alert(data.message || '세션이 만료되었습니다. 다시 접속해 주세요.');
-                localStorage.removeItem('sessionId');
-                window.location.replace('chatPage.html');
             }, 50);
         });
 
