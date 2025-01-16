@@ -204,7 +204,7 @@ io.on('connection', async (socket) => {
                 } else {
                     /**/
                     // redis 세션 생성
-                    const sessionId = socket.handshake.query.sessionId;
+                    let sessionId = socket.handshake.query.sessionId;
                     let sessionData;
 
                     if (sessionId) {
@@ -213,15 +213,18 @@ io.on('connection', async (socket) => {
                             console.log(`[server] 세션 복원 성공: ${sessionId}`);
                         } else {
                             console.log(`[server] 세션이 만료되었습니다. 새로운 세션 생성.`);
+                            sessionId = null;
                         }
                     }
 
-                    if (!sessionId) {
-                        const newSessionId = `${socket.id}-${Date.now()}`; // 새 세션 ID 생성 (IP 기반)
-                        sessionData = { createdAt: new Date().toString() }; // 기본 세션 데이터
+                    if (!sessionId || !sessionData) {
+                        const rawIP = socket.handshake.headers['x-forwarded-for'] || socket.handshake.address;
+                        const userIP = normalizeIP(rawIP); // IP 정규화
+                        sessionId = `${userIP}-${Date.now()}`; // 새 세션 ID 생성
+                        sessionData = { userIP, createdAt: new Date().toString() }; // 기본 세션 데이터
                         await saveSession(sessionId, sessionData);
-                        socket.emit('session-id', { sessionId: newSessionId });
                         console.log(`[server] 새로운 세션 생성: ${sessionId}`);
+                        // socket.emit('session-id', { sessionId: newSessionId }); // 클라이언트로 세션 ID 전송
                     }
 
                     // 클라이언트로 세션 ID 전송
@@ -370,8 +373,14 @@ io.on('connection', async (socket) => {
     // 연결 종료 (시스템/네트워크 종료시) 
     socket.on('disconnect', async()=>{
         // console.log(`[server] ${socket.nickname}[${socket.userIP}]서버 연결 종료.`);
-        console.log(`[server] 사용자 ${sessionId} 연결 종료.`);
-        await deleteSession(sessionId);
+        const sessionId = socket.handshake.query.sessionId;
+        if (sessionId) {
+            await deleteSession(sessionId);
+            console.log(`[redis] sessionId:${sessionId} 삭제`);
+        }
+
+
+
         // const rawIP = socket.handshake.headers['x-forwarded-for'] || socket.handshake.address;
         // const userIP = normalizeIP(rawIP);
 
