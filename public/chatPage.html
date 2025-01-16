@@ -142,7 +142,6 @@
         }
     }
 
-
     // modal open
     function openReportModal() {
         const reportModal  = document.getElementById('reportModal');
@@ -181,14 +180,10 @@
         // 신고 데이터 서버전송
         socket.emit('report-disconnect', reportData);
         
-       
         // 서버 응답 처리
         closeReportModal();
     }
 
-
-
-    
     /* 채팅 클라이언트 */
     document.addEventListener('DOMContentLoaded', function() {
         // const socket = io();
@@ -210,6 +205,29 @@
         
         if (!messageInput) {
             console.error('<input id="message"> not found after DOMContentLoaded');
+        }
+
+        // 채팅창 UI 초기화
+        function resetChatUI( forced = false ) {
+            
+            if (forced) {
+                chatBox.style.display = 'none';
+                chatButtonContainer.style.display = 'flex';
+            }
+
+            if (chatHeader) {
+                chatHeader.textContent = '';
+            }
+            
+            if (inputBox) {
+                inputBox.style.visibility = 'hidden';
+                inputBox.style.display = 'none';
+            }
+            
+            if (messages && forced) {
+                messages.innerHTML = '';
+            }
+            console.log('[client] Chat UI 리셋 성공');
         }
 
         // 사용자가 enter 클릭시 채팅창 화면에 나타내기
@@ -239,13 +257,11 @@
             notificationBox.style.display ='none';
         }, 15500 ); 
 
-
         /* 
         * emoji 
         */
         const emojiBtn = document.getElementById('emoji-btn');
         const inputElement = document.getElementById('message');
-
         const pickerOptions = {
             onEmojiSelect: (emoji) => {
                 //const input = document.getElementById('message'); 
@@ -257,7 +273,6 @@
                 }
             },
         };
-       
         const picker = new EmojiMart.Picker(pickerOptions);
         picker.style.display = 'none';
         picker.style.position = 'absolute';
@@ -301,7 +316,7 @@
                 hidePicker();
             }
         });
-        //emojiBtn.addEventListener('click', togglePicker);
+
         emojiBtn.addEventListener('touchstart', (evnet) => {
             event.preventDefault();
             togglePicker();
@@ -333,14 +348,11 @@
         updateSendBtn(mediaQuery);
         mediaQuery.addEventListener('change', updateSendBtn);
 
-
         /*
         *   채팅
         */ 
         chatBox.style.display = 'none';
         enterBtn.style.display = 'block';
-
-        
 
         // 서버에서 닉네임 초기화 이벤트 추가
         socket.on('set-nickname', (nickname) => {
@@ -377,15 +389,13 @@
             document.getElementById('chatButtonContainer').style.display = 'flex';
             document.getElementById('messages').innerHTML = '';
 
-            // window.location.href= 'chatPage.html';
-                // 100ms 딜레이 후 페이지 이동
             setTimeout(() => {
                 window.location.replace('chatPage.html');
                 alert(data.message);
             }, 50);
         });
 
-       // message 구분하여 나타내기 
+       // message 구분
         function appendMessages(message, messageType) {
             const messageContainer = document.getElementById('messages');
             const newMessage = document.createElement('div');
@@ -400,10 +410,9 @@
             if (messageType === 'sender') {
                 messageInput.value = '';
             }
-            //messageInput.value = ''; 
         };
 
-        // send 메시지 
+        // send메시지 
         function sendMessage(){
             const msg = messageInput.value.trim();
             if (msg) {
@@ -412,7 +421,7 @@
             }
         };
 
-        // 버튼 클릭 또는 Enter 키 입력 시 메시지 전송
+        // 버튼클릭 또는 Enter 입력시 메시지 전송
         function handleSend(event) {
             if (event.type === 'click' || (event.type === 'keydown' && event.key === 'Enter')) {
                 event.preventDefault(); // 기본 동작 방지
@@ -441,7 +450,6 @@
             roomId= data.roomId;
             partnerNickname = partner.nickname;
             partnerIP = partner.userIP;
-            
 
             const inputBox = document.getElementById('inputBox');
             if (inputBox) {
@@ -476,44 +484,43 @@
         // 채팅 종료시 처리
         socket.on('chat-end', (data) => {
             appendMessages(data.message, 'system'); // 시스템 메시지로 알림 표시
-            const chatHeader = document.getElementById('chatHeader');
-            if (chatHeader) {
-                chatHeader.textContent = ''; // 닉네임 제거
-                console.log('chatHeader content cleared.');
+            
+            if (data.isSelf) {
+                resetChatUI(true);
+            } else {
+                if (chatHeader) {
+                    chatHeader.textContent = ''; // 닉네임 제거
+                }
+                if (inputBox) {
+                    inputBox.style.visibility = 'hidden';
+                    inputBox.style.display = 'none';
+                }
             }
-            document.getElementById('inputBox').style.display='none'; // 입력창 비활성화
         });
 
         // 서버 연결 종료 감지
-        // socket.on('disconnect', () => {
         socket.on('server-disconnect', () => {
             console.log('[client] 서버와 연결이 종료되었습니다.');
-
             // 시스템 메시지 추가
             appendMessages(data.message, 'system');
-
-            // 닉네임 및 UI 초기화
-            const chatHeader = document.getElementById('chatHeader');
-            if (chatHeader) {
-                chatHeader.textContent = ''; // 닉네임 제거
-            }
-            // 입력창 비활성화
-            const inputBox = document.getElementById('inputBox');
-            if (inputBox) {
-                inputBox.style.display = 'none';
-            }
+            resetChatUI(true);
         });
 
         // 상대방의 요청으로 채팅 종료
         socket.on('user-disconnect', (data) => {
             appendMessages(data.message, 'system'); // 시스템 메시지로 알림 표시
             
-            const chatHeader = document.getElementById('chatHeader');
-            if (chatHeader) {
-                chatHeader.textContent = ''; // 닉네임 제거
-                console.log('chatHeader content cleared.');
+            if (data.isSelf) {
+                resetChatUI(true);
+            } else {
+                if (chatHeader) {
+                    chatHeader.textContent = ''; // 닉네임 제거
+                }
+                if (inputBox) {
+                    inputBox.style.visibility = 'hidden'; 
+                    inputBox.style.display = 'none';
+                }
             }
-            document.getElementById('inputBox').style.display='none'; // 입력창 비활성화
         });
 
         // 이벤트 리스너 추가
@@ -522,17 +529,15 @@
 
         // 채팅 종료 버튼 클릭 시
         document.getElementById('exitBtn').addEventListener('click', () => {
-            socket.emit('user-disconnect'); // 서버에 종료 요청
-            document.getElementById('chatBox').style.display = 'none'; // 채팅창 숨기기
-            document.getElementById('chatButtonContainer').style.display = 'flex'; // 초기 상태로 복구
-            document.getElementById('messages').innerHTML = '';
-       
+            chatStarted=false;
+            socket.emit('user-disconnect', { isSelf: true }); // 서버에 종료 요청
+            resetChatUI(true);
         });
 
         // 재연결 버튼 클릭시 
         document.getElementById('restartBtn').addEventListener('click', () => {
-            socket.emit('restart-connect'); // 서버에 재연결 요청
-            document.getElementById('inputBox').style.display='none'; 
+            socket.emit('restart-connect');
+            resetChatUI();
         });
     });
 </script>

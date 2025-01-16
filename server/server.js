@@ -206,6 +206,8 @@ io.on('connection', async (socket) => {
                     matchUsers();
                 }
             });
+        } else {
+            console.log(`[server] ${userIP} 유저는 이미 입장 상태입니다.`);
         }
     }); //enter-state end
 
@@ -300,15 +302,9 @@ io.on('connection', async (socket) => {
             if (partner) {
                 if(partner.socket.connected) {
                     addToWaitingUsers(partner.socket);
-                    // 상대방에게 연결종료 알림
-                    partner.socket.emit('chat-end', {
-                        message: '상대방이 연결을 종료하였습니다. \n 새로운 유저를 찾습니다.',
-                        messageType: 'system'
-                    });
                 }
             }
-            //방삭제
-            removeChatRoom(roomId);
+            handleDisconnection(socket.id);
         }
          // 재연결 메시지 알림
          socket.emit('wait-state', {
@@ -344,6 +340,8 @@ io.on('connection', async (socket) => {
     socket.on('user-disconnect', () => {
         console.log(`[server] ${socket.nickname}[${socket.userIP}]유저요청 연결 종료. `);
         handleDisconnection(socket.id);
+        socket.entered = false;
+        userSessions.delete(socket.id);
     });
 
     // 연결 종료 (신고)
@@ -573,7 +571,6 @@ function checkMaxReports(userIP, callback) {
 
 // 대기열 관리
 function addToWaitingUsers(socket){
-
     if (!socket.entered) {
         console.log(`[server] ${socket.id} attempted to join without entering. Ignoring.`);
         return false; // 사용자가 입장 버튼을 누르지 않았음
@@ -688,11 +685,11 @@ async function notifyChatReady(user1, user2, roomId) {
     });
 }
 
+// 종료 핸들러
 function handleDisconnection(socketId) {
     const chatRoom = getChatRoomByUser(socketId);
 
     if (chatRoom) {
-        // const { roomId, users } = chatRoom;
         const { roomId, room } = chatRoom;
        
         if (!room || !room.users) {
@@ -703,22 +700,24 @@ function handleDisconnection(socketId) {
         const partner = room.users.find(user => user.id !== socketId);
 
         if (partner && partner.socket && partner.socket.connected) {
-            // if (!waitingUsers.has(partner.socket.id)) {
             addToWaitingUsers(partner.socket);
-            //console.log(`${partner.nickname} 대기열 추가`);
-
             // 상대방에게 연결 종료 알림
             partner.socket.emit('chat-end', {
-                message: '상대방이 연결을 종료하였습니다. \n 재연결을 위해 잠시만 기다려 주세요.',
+                message: '상대방이 연결을 종료하였습니다. \n 새로운 유저를 찾습니다.',
                 messageType: 'system',
             });
-        // }
         }
         removeChatRoom(roomId);
     }
+
     if (waitingUsers.has(socketId)) {
         removeFromWaitingQueue(socketId);
-        console.log(` 대기열에서 제거 : ${socketId}`);
+        console.log(`[server] 대기열에서 제거 : ${socketId}`);
+    }
+
+    if (userSessions.has(socketId)) {
+        userSessions.delete(socketId);
+        console.log(`[server] 세션 제거: ${socketId}`);
     }
     console.log(`[server] 연결 종료 처리 완료: ${socketId}`);
 }
