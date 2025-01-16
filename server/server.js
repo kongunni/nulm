@@ -311,7 +311,7 @@ io.on('connection', async (socket) => {
     // 세션 상태에 따른 처리
     socket.on('session-action', async (action) => {
         const session = userSessions.get(socket.id);
-        console.log(`sessoion get: ${socket.id}:`, session);
+        // console.log(`sessoion get: ${socket.id}:`, session);
         
         const sessionId = socket.handshake.query.sessionId;
         const sessionData = await getSession(sessionId);
@@ -559,6 +559,12 @@ async function saveSession(sessionId, sessionData) {
 // redis - 세션 불러오기
 async function getSession(sessionId) {
     const data = await redisClient.get(`session:${sessionId}`);
+
+    if (!data) {
+        console.log(`[redis] 세션이 이미 삭제되었거나 없습니다: ${sessionId}`);
+        return null;
+    }
+
     console.log(`[redis] sessionId:${sessionId} 불러오기`);
     return data ? JSON.parse(data) : null;    
 }
@@ -616,31 +622,46 @@ function initializeSession(socket) {
 
 //세션 만료
 async function handleSessionTimeout(socket) {
-    if (!socket || !socket.id) {
-        console.error(`[server] Invalid socket object in handleSessionTimeout`);
+    const session = userSessions.get(socket.id);
+    if (!session) {
+        console.error(`[server] 세션을 찾을 수 없습니다. socket.id: ${socket.id}`);
         return;
     }
 
-    const sessionId = socket.handshake.query.sessionId;
-    const sessionData = await getSession(sessionId);
-
-    if (!sessionData) {
-        console.warn(`[server] 세션이 이미 만료되었습니다: ${sessionId}`);
+    const timeSinceActivity = Date.now() - session.lastActivity;
+    if (!session.background && timeSinceActivity < SESSION_DURATION) {
+        console.warn(`[server] 세션이 여전히 활성 상태입니다. socket.id: ${socket.id}`);
         return;
     }
 
-    const timeSinceActivity = Date.now() - sessionData.lastActivity;
+    userSessions.delete(socket.id); // 세션 삭제
+    removeFromWaitingQueue(socket.id); // 대기열에서 제거
+    console.log(`[server] 세션이 만료되었습니다. socket.id: ${socket.id}`);
+    // if (!socket || !socket.id) {
+    //     console.error(`[server] Invalid socket object in handleSessionTimeout`);
+    //     return;
+    // }
 
-    // 세션 만료 조건 확인
-    if (timeSinceActivity < SESSION_DURATION) {
-        console.log(`[server] 세션이 아직 유효합니다: ${sessionId}`);
-        return;
-    }
+    // const sessionId = socket.handshake.query.sessionId;
+    // const sessionData = await getSession(sessionId);
 
-    // 세션 만료 처리
-    await deleteSession(sessionId);
-    console.log(`[server] 세션 만료: ${sessionId}`);
-    socket.disconnect(true);
+    // if (!sessionData) {
+    //     console.warn(`[server] 세션이 이미 만료되었습니다: ${sessionId}`);
+    //     return;
+    // }
+
+    // const timeSinceActivity = Date.now() - sessionData.lastActivity;
+
+    // // 세션 만료 조건 확인
+    // if (timeSinceActivity < SESSION_DURATION) {
+    //     console.log(`[server] 세션이 아직 유효합니다: ${sessionId}`);
+    //     return;
+    // }
+
+    // // 세션 만료 처리
+    // await deleteSession(sessionId);
+    // console.log(`[server] 세션 만료: ${sessionId}`);
+    // socket.disconnect(true);
 }
 
 // async function handleSessionTimeout(socket){
