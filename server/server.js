@@ -162,15 +162,19 @@ const userSessions = new Map(); // 사용자 세션 상태 관리
 function normalizeIP(ip) {
     
     if (!ip) return null;
-    const processedIP = ip.split(','[0].trim);
+
+    const processedIP = ip.split(',')[0].trim();
 
     // (IPv6 localhost) 변환
     if (processedIP === "::1") {
         return "127.0.0.1";
-    } else  if (processedIP.startsWith("::ffff:")) {
-        // IPv6에서 IPv4 주소 추출
+    } 
+    
+    // IPv6에서 IPv4 주소 추출
+    if (processedIP.startsWith("::ffff:")) {
         return processedIP.replace("::ffff:", "");
     }
+    
     return processedIP;
 }
 
@@ -188,7 +192,7 @@ io.on('connection', async (socket) => {
             const userIP = normalizeIP(rawIP);
             // const userIP = normalizeIP(socket.handshake.address);
             console.log(`[server] Raw IP: ${rawIP}, Normalized IP: ${userIP}`)
-            
+
             isBlocked(userIP, (blocked) => {
                 if (blocked) {
                     console.log(`[server] 차단된 IP ${userIP} 접속 불가`);
