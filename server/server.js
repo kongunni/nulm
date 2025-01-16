@@ -200,23 +200,43 @@ io.on('connection', async (socket) => {
                         message: '접근이 제한된 유저입니다. 관리자에게 문의해 주세요.'
                     });
                     socket.disconnect(true); 
-                } else {
-                    /**/
-                    // redis 세션 생성
-                    const sessionId = await manageRedisSession(socket, userIP);
-                    socket.emit('session-id', { sessionId });
-                    console.log(`[server] 새로운 사용자 ${userIP} 접속`);
+                    return;
+                } 
 
-                    handleUserConnection(socket, userIP);
-                    addToWaitingUsers(socket); //대기열 추가
-                    
-                    // 대기 상태 메시지 전송
-                    socket.emit('wait-state', {
-                            message: "상대 유저를 찾는 중입니다. \n 잠시만 기다려 주세요.",
-                            messageType: 'system'
-                    });
-                    matchUsers();
+                // 세션 복원 또는 생성
+                const sessionId = socket.handshake.query.sessionId;
+                let sessionData = null;
+
+                if (sessionId) {
+                    sessionData = await getSession(sessionId); // Redis에서 세션 데이터 가져오기
+                    if (sessionData) {
+                        console.log(`[redis] 기존 세션 복원: ${sessionId}`);
+                        sessionData.disconnectedAt = null; // 연결 복원 처리
+                        await saveSession(sessionId, sessionData); // Redis에 갱신
+                        socket.emit('session-restored', { message: '기존 세션이 복원되었습니다.', sessionId });
+                    } else {
+                        console.log(`[redis] 기존 세션 없음. 새 세션 생성 필요.`);
+                    }
                 }
+
+                // 기존 세션이 없으면 새 세션 생성
+                if (!sessionData) {
+                    const newSessionId = `${userIP}-${Date.now()}`;
+                    sessionData = { userIP, lastActivity: Date.now(), background: false }; // 초기 세션 데이터
+                    await saveSession(newSessionId, sessionData);
+                    console.log(`[redis] 새로운 세션 생성 및 저장 완료: ${newSessionId}`);
+                    socket.emit('session-id', { sessionId: newSessionId });
+                }
+
+                handleUserConnection(socket, userIP);
+                addToWaitingUsers(socket); //대기열 추가
+                
+                // 대기 상태 메시지 전송
+                socket.emit('wait-state', {
+                    message: "상대 유저를 찾는 중입니다. \n 잠시만 기다려 주세요.",
+                    messageType: 'system'
+                });
+                matchUsers();
             });
         } else {
             console.log(`[server] ${userIP} 유저는 이미 입장 상태입니다.`);
@@ -336,7 +356,18 @@ io.on('connection', async (socket) => {
 
     // 연결 종료 (시스템/네트워크 종료시) 
     socket.on('disconnect', async()=>{
-        // console.log(`[server] ${socket.nickname}[${socket.userIP}]서버 연결 종료.`);
+        const sessionId = socket.handshake.query.sessionId;
+
+        if (sessionId) {
+            const sessionData = await getSession(sessionId);
+            if (sessionData) {
+                sessionData.disconnectedAt = Date.now(); // 연결 종료 시각 저장
+                sessionData.background = true; // 백그라운드 상태로 설정
+                await saveSession(sessionId, sessionData);
+                console.log(`[redis] 세션 일시 중단: ${sessionId}`);
+            }
+        }
+
         await handleDisconnection(socket.id);
         console.log(`[redis] 연결종료 처리 완료:${socket.id}`);
     });
@@ -468,13 +499,14 @@ async function handleUserConnection(socket, userIP) {
 
 // redis - 세션 저장
 async function saveSession(sessionId, sessionData) {
+    const ttl = sessionData.background ? 10800 : 10800; //백그라운드:포그라운드
     await redisClient.set(
         `session:${sessionId}`,
         JSON.stringify(sessionData),
-        'EX', // 만료 시간 설정
-        SESSION_DURATION / 1000 // 초 단위로 변환
+        'EX',
+        ttl
     );
-    console.log(`[redis] sessionId:${sessionId} 저장`);
+    console.log(`[redis] sessionId:${sessionId} 저장(TTL: ${ttl}s)`);
 }
 
 // redis - 세션 불러오기

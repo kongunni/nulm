@@ -193,6 +193,16 @@
             query: { sessionId },
         });
         
+        // 서버에서 세션 복원 알림 수신
+        socket.on('session-restored', (data) => {
+            console.log(`[client] ${data.message}`);
+            // 세션 ID 로컬 스토리지에 저장: 중복 저장 방지
+            if (data.sessionId) {
+                localStorage.setItem('sessionId', data.sessionId);
+                console.log(`[client] 세션 ID 저장: ${data.sessionId}`);
+            }
+        });
+        
         // 서버에서 새로운 세션id 수신 
         socket.on('session-id', (data) => {
             if (data.sessionId) {
