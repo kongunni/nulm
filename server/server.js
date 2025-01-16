@@ -368,13 +368,26 @@ io.on('connection', async (socket) => {
     socket.on('disconnect', async()=>{
         console.log(`[server] ${socket.nickname}[${socket.userIP}]서버 연결 종료.`);
         
-        const sessionId = socket.handshake.query.sessionId;
-        if (sessionId) {
-            await deleteSession(sessionId);
-            handleDisconnection(socket.id);
-            userSessions.delete(socket.id);
-            console.log(`[server] 세션 삭제 완료: ${sessionId}`);
-        }
+        const rawIP = socket.handshake.headers['x-forwarded-for'] || socket.handshake.address;
+        const userIP = normalizeIP(rawIP);
+
+        const sessionId = `${userIP}-${Date.now()}`;
+
+
+        console.log(`[server] ${socket.nickname}[${userIP}] 서버 연결 종료.`);
+
+        await deleteSession(sessionId); // Redis에서 세션 삭제
+        console.log(`[server] 세션 삭제 완료: ${sessionId}`);
+
+        removeFromWaitingQueue(socket.id);
+        console.log(`[server] 연결 종료 처리 완료: ${socket.id}`);
+        
+        // if (sessionId) {
+        //     await deleteSession(sessionId);
+        //     handleDisconnection(socket.id);
+        //     userSessions.delete(socket.id);
+        //     console.log(`[server] 세션 삭제 완료: ${sessionId}`);
+        // }
         
         // if (userSessions.has(socket.id)) {
         //     // io.emit('server-disconnect', { message: '상대방이 연결을 종료했습니다.' });

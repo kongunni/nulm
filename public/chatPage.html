@@ -187,7 +187,13 @@
     /* 채팅 클라이언트 */
     document.addEventListener('DOMContentLoaded', function() {
         // socket = io();
-
+        socket = io ({
+            query: {
+                sessionId,
+            },
+        });
+        
+        
         const chatButtonContainer = document.getElementById('chatButtonContainer'); 
         const chatBox = document.getElementById('chatBox');
         const enterBtn = document.getElementById('enterBtn');
@@ -203,12 +209,7 @@
         let isProcessing = false; // 중복 입력 방지를 위한 플래그 변수
         let sessionId = localStorage.getItem('sessionId');
 
-        socket = io ({
-            query: {
-                sessionId,
-            },
-        });
-        
+      
         // 채팅창 UI 초기화
         function resetChatUI( forced = false ) {
             
