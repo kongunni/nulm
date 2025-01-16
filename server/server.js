@@ -204,7 +204,7 @@ io.on('connection', async (socket) => {
                 } else {
                     /**/
                     // redis 세션 생성
-                    let sessionId = socket.handshake.query.sessionId;
+                    const sessionId = socket.handshake.query.sessionId;
                     let sessionData;
 
                     if (sessionId) {
@@ -213,14 +213,14 @@ io.on('connection', async (socket) => {
                             console.log(`[server] 세션 복원 성공: ${sessionId}`);
                         } else {
                             console.log(`[server] 세션이 만료되었습니다. 새로운 세션 생성.`);
-                            sessionId = null; // 세션 ID 초기화
                         }
                     }
 
                     if (!sessionId) {
-                        sessionId = `${userIP}-${Date.now()}`; // 새 세션 ID 생성 (IP 기반)
-                        sessionData = { userIP, createdAt: new Date().toString() }; // 기본 세션 데이터
+                        const newSessionId = `${socket.id}-${Date.now()}`; // 새 세션 ID 생성 (IP 기반)
+                        sessionData = { createdAt: new Date().toString() }; // 기본 세션 데이터
                         await saveSession(sessionId, sessionData);
+                        socket.emit('session-id', { sessionId: newSessionId });
                         console.log(`[server] 새로운 세션 생성: ${sessionId}`);
                     }
 
@@ -306,27 +306,31 @@ io.on('connection', async (socket) => {
     });
 
     // 세션 상태에 따른 처리
-    socket.on('session-action', (action) => {
-        const session = userSessions.get(socket.id);
+    socket.on('session-action', async (action) => {
+        // const session = userSessions.get(socket.id);
         console.log(`sessoion get: ${socket.id}:`, session);
         
-
         if (action === 'reset') {
             initializeSession(socket);
             console.log(`${socket.id} session reset`);
         } else if (action === 'background') {
             // 백그라운드 상태로 전환
-            if (session) {
-                if (session.timeout) {
-                    clearTimeout(session.timeout); // 기존 타임아웃 제거
-                }
-
-                session.background = true; // 백그라운드 상태 설정
-                session.timeout = setTimeout(() => handleSessionTimeout(socket), SESSION_DURATION); // 새로운 타임아웃 설정
-                userSessions.set(socket.id, session); // 갱신된 세션 저장
-
-                console.log(`[server] ${socket.id} set to background with timeout of ${SESSION_DURATION / 1000}s.`);
+            if (action === 'background') {
+                console.log(`[server] ${sessionId} 백그라운드 전환.`);
+                sessionData.lastActivity = Date.now(); // 마지막 활동 시간 업데이트
+                await saveSession(sessionId, sessionData);
             }
+            // if (session) {
+            //     if (session.timeout) {
+            //         clearTimeout(session.timeout); // 기존 타임아웃 제거
+            //     }
+
+            //     session.background = true; // 백그라운드 상태 설정
+            //     session.timeout = setTimeout(() => handleSessionTimeout(socket), SESSION_DURATION); // 새로운 타임아웃 설정
+            //     userSessions.set(socket.id, session); // 갱신된 세션 저장
+
+            //     console.log(`[server] ${socket.id} set to background with timeout of ${SESSION_DURATION / 1000}s.`);
+            // }
         }
     }); 
 
@@ -365,22 +369,31 @@ io.on('connection', async (socket) => {
 
     // 연결 종료 (시스템/네트워크 종료시) 
     socket.on('disconnect', async()=>{
-        console.log(`[server] ${socket.nickname}[${socket.userIP}]서버 연결 종료.`);
+        // console.log(`[server] ${socket.nickname}[${socket.userIP}]서버 연결 종료.`);
+        console.log(`[server] 사용자 ${sessionId} 연결 종료.`);
+        await deleteSession(sessionId);
+        // const rawIP = socket.handshake.headers['x-forwarded-for'] || socket.handshake.address;
+        // const userIP = normalizeIP(rawIP);
+
+        // const sessionId = `${userIP}-${Date.now()}`;
+
+
+        // console.log(`[server] ${socket.nickname}[${userIP}] 서버 연결 종료.`);
+
+        // await deleteSession(sessionId); // Redis에서 세션 삭제
+        // console.log(`[server] 세션 삭제 완료: ${sessionId}`);
+
+        // removeFromWaitingQueue(socket.id);
+        // console.log(`[server] 연결 종료 처리 완료: ${socket.id}`);
         
-        const rawIP = socket.handshake.headers['x-forwarded-for'] || socket.handshake.address;
-        const userIP = normalizeIP(rawIP);
-
-        const sessionId = `${userIP}-${Date.now()}`;
 
 
-        console.log(`[server] ${socket.nickname}[${userIP}] 서버 연결 종료.`);
 
-        await deleteSession(sessionId); // Redis에서 세션 삭제
-        console.log(`[server] 세션 삭제 완료: ${sessionId}`);
 
-        removeFromWaitingQueue(socket.id);
-        console.log(`[server] 연결 종료 처리 완료: ${socket.id}`);
-        
+
+
+
+
         // if (sessionId) {
         //     await deleteSession(sessionId);
         //     handleDisconnection(socket.id);

@@ -190,11 +190,17 @@
         let sessionId = localStorage.getItem('sessionId');
 
         socket = io ({
-            query: {
-                sessionId,
-            },
+            query: { sessionId },
         });
         
+        // 서버에서 새로운 세션id 수신 
+        socket.on('session-id', (data) => {
+            if (data.sessionId) {
+                sessionId = data.sessionId;
+                localStorage.setItem('sessionId', sessionId); 
+                console.log(`[client] 세션 ID 저장: ${sessionId}`);
+            }
+        });
 
         const chatButtonContainer = document.getElementById('chatButtonContainer'); 
         const chatBox = document.getElementById('chatBox');
@@ -359,13 +365,6 @@
         chatBox.style.display = 'none';
         enterBtn.style.display = 'block';
 
-        // 서버에서 새로운 세션id 수신 
-        socket.on('session-id', (data) => {
-            if (data.sessionId) {
-                sessionId = data.sessionId;
-                localStorage.setItem('sessionId', sessionId); 
-            }
-        });
 
         // 서버에서 닉네임 초기화 이벤트 추가
         socket.on('set-nickname', (nickname) => {
@@ -403,10 +402,10 @@
             document.getElementById('messages').innerHTML = '';
 
             setTimeout(() => {
-
-                alert(data.message);
+                alert(data.message || '세션이 만료되었습니다. 다시 접속해 주세요.');
                 localStorage.removeItem('sessionId');
-                window.location.replace('chatPage.html');
+                window.location.reload();
+                // window.location.replace('chatPage.html');
             }, 50);
         });
 
