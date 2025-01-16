@@ -502,6 +502,7 @@ async function handleUserConnection(socket, userIP) {
 // redis - 세션 저장
 async function saveSession(sessionId, sessionData) {
     const ttl = sessionData.background ? 3 * 60 * 60 : 3 * 60 * 60;  //백그라운드:포그라운드
+    sessionData.socketId = sessionData.socketId || null; 
     await redisClient.set(
         `session:${sessionId}`,
         JSON.stringify(sessionData),
@@ -581,6 +582,18 @@ async function handleSessionTimeout(sessionId) {
 
     await deleteSession(sessionId); // Redis에서 세션 삭제
     console.log(`[server] 세션 만료: ${sessionId}`);
+
+    // 소켓 알림 및 연결 종료
+    const socketId = sessionData.socketId; // 세션 데이터에서 socketId 가져오기
+    const socket = io.sockets.sockets.get(socketId); // 소켓 객체 가져오기
+
+    if (socket) {
+        socket.emit('session-expired', { message: '세션이 만료되었습니다. 다시 접속해 주세요.' });
+        socket.disconnect(true); // 소켓 연결 해제
+    } else {
+        console.warn(`[server] 소켓을 찾을 수 없습니다. socketId: ${socketId}`);
+    }
+    await handleDisconnection(socketId);
 }
 
 
