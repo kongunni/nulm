@@ -163,7 +163,7 @@ function normalizeIP(ip) {
     
     if (!ip) return null;
 
-    const processedIP = ip.split(',')[0].trim();
+    const processedIP = String(ip).split(',')[0].trim();
 
     // (IPv6 localhost) 변환
     if (processedIP === "::1") {
