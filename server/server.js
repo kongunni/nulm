@@ -310,7 +310,7 @@ io.on('connection', async (socket) => {
 
     // 세션 상태에 따른 처리
     socket.on('session-action', async (action) => {
-        // const session = userSessions.get(socket.id);
+        const session = userSessions.get(socket.id);
         console.log(`sessoion get: ${socket.id}:`, session);
         
         const sessionId = socket.handshake.query.sessionId;
