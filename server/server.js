@@ -161,10 +161,9 @@ const userSessions = new Map(); // 사용자 세션 상태 관리
 // IPv4 반환
 function normalizeIP(ip) {
     
-    if (!ip) return null;
-
-    const processedIP = String(ip).split(',')[0].trim();
-    console.log(`[normalizeIP] Processed IP:`, processedIP);
+    // if (!ip) return null;
+    if (!ip || typeof ip !== 'string') return null;
+    const processedIP = ip.split(',')[0].trim();
 
     // (IPv6 localhost) 변환
     if (processedIP === "::1") {
@@ -220,7 +219,7 @@ io.on('connection', async (socket) => {
 
                     if (!sessionId) {
                         sessionId = `${userIP}-${Date.now()}`; // 새 세션 ID 생성 (IP 기반)
-                        sessionData = { userIP, createdAt: new Date() }; // 기본 세션 데이터
+                        sessionData = { userIP, createdAt: new Date().toString() }; // 기본 세션 데이터
                         await saveSession(sessionId, sessionData);
                         console.log(`[server] 새로운 세션 생성: ${sessionId}`);
                     }
