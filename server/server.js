@@ -155,7 +155,6 @@ const MAX_REPORT = 20; // 최대 리포트 수
 // 세션 타임아웃 설정
 // const SESSION_DURATION = 1 * 60 * 1000; //test time 
 const SESSION_DURATION = 8 * 60 * 60 * 1000; //8시간
-const userSessions = new Map(); // 사용자 세션 상태 관리
 
 
 // IPv4 반환
@@ -204,47 +203,18 @@ io.on('connection', async (socket) => {
                 } else {
                     /**/
                     // redis 세션 생성
-                    let sessionId = socket.handshake.query.sessionId;
-                    let sessionData;
-
-                    if (sessionId) {
-                        sessionData = await getSession(sessionId);
-                        if (sessionData) {
-                            console.log(`[server] 세션 복원 성공: ${sessionId}`);
-                        } else {
-                            console.log(`[server] 세션이 만료되었습니다. 새로운 세션 생성.`);
-                            sessionId = null;
-                        }
-                    }
-
-                    if (!sessionId || !sessionData) {
-                        const rawIP = socket.handshake.headers['x-forwarded-for'] || socket.handshake.address;
-                        const userIP = normalizeIP(rawIP); // IP 정규화
-                        sessionId = `${userIP}-${Date.now()}`; // 새 세션 ID 생성
-                        sessionData = { userIP, createdAt: new Date().toString() }; // 기본 세션 데이터
-                        await saveSession(sessionId, sessionData);
-                        console.log(`[server] 새로운 세션 생성: ${sessionId}`);
-                        // socket.emit('session-id', { sessionId: newSessionId }); // 클라이언트로 세션 ID 전송
-                    }
-
-                    // 클라이언트로 세션 ID 전송
+                    const sessionId = await manageRedisSession(socket, userIP);
                     socket.emit('session-id', { sessionId });
-
-
-                    /**/
                     console.log(`[server] 새로운 사용자 ${userIP} 접속`);
-                    
+
                     handleUserConnection(socket, userIP);
                     addToWaitingUsers(socket); //대기열 추가
                     
                     // 대기 상태 메시지 전송
-                    // delay(1000).then(()=> {
-                        socket.emit('wait-state', {
+                    socket.emit('wait-state', {
                             message: "상대 유저를 찾는 중입니다. \n 잠시만 기다려 주세요.",
                             messageType: 'system'
-                        });
-                    // });
-                    // 대기열 추가된 유저들과 랜덤 매칭
+                    });
                     matchUsers();
                 }
             });
@@ -256,11 +226,12 @@ io.on('connection', async (socket) => {
 
     // 메시지 전송 처리
     socket.on('chat-message', async (msg) => {
-        const session = userSessions.get(socket.id);
+        const sessionId = socket.handshake.query.sessionId;
+        const sessionData = await getSession(sessionId);
         const chatRoom = getChatRoomByUser(socket.id);
 
-        if (!session || !chatRoom) {
-            const errorMessage = !session ? '세션 정보를 가져올 수 없습니다.'
+        if (!sessionData || !chatRoom) {
+            const errorMessage = !sessionData ? '세션 정보를 가져올 수 없습니다.'
                                           : '채팅 정보를 가져올 수 없습니다.';
             console.log(`[server] ${errorMessage}`);
             return;
@@ -272,10 +243,8 @@ io.on('connection', async (socket) => {
             console.error(`[server] Room or users not found for roomId: ${roomId}`);
             return;
         }
-    
 
         room.users.forEach(user => {
-
             if (!user.socket || !user.socket.connected) {
                 console.warn(`[server] Socket is not connected for user: ${user.nickname}`);
                 return;
@@ -295,7 +264,7 @@ io.on('connection', async (socket) => {
         // 로그 저장
         const logData = {
             nickname: socket.nickname,
-            userIP: socket.userIP,
+            userIP: sessionData.userIP,
             message: msg,
             timestamp: new Date(),
         };
@@ -310,8 +279,6 @@ io.on('connection', async (socket) => {
 
     // 세션 상태에 따른 처리
     socket.on('session-action', async (action) => {
-        const session = userSessions.get(socket.id);
-        // console.log(`sessoion get: ${socket.id}:`, session);
         
         const sessionId = socket.handshake.query.sessionId;
         const sessionData = await getSession(sessionId);
@@ -320,33 +287,17 @@ io.on('connection', async (socket) => {
             console.warn(`[server] 세션 데이터 없음: ${sessionId}`);
             return;
         }
-    
-
 
         if (action === 'reset') {
             sessionData.lastActivity = Date.now(); // 활동 시간 갱신
             await saveSession(sessionId, sessionData);
             console.log(`[server] 세션이 리셋되었습니다: ${sessionId}`);
-            // initializeSession(socket);
-            // console.log(`${socket.id} session reset`);
         } else if (action === 'background') {
             // 백그라운드 상태로 전환
             sessionData.lastActivity = Date.now(); // 활동 시간 갱신
             sessionData.background = true; // 백그라운드 상태 플래그 추가
             await saveSession(sessionId, sessionData);
             console.log(`[server] 세션이 백그라운드 상태로 전환되었습니다: ${sessionId}`);
-          
-            // if (session) {
-            //     if (session.timeout) {
-            //         clearTimeout(session.timeout); // 기존 타임아웃 제거
-            //     }
-
-            //     session.background = true; // 백그라운드 상태 설정
-            //     session.timeout = setTimeout(() => handleSessionTimeout(socket), SESSION_DURATION); // 새로운 타임아웃 설정
-            //     userSessions.set(socket.id, session); // 갱신된 세션 저장
-
-            //     console.log(`[server] ${socket.id} set to background with timeout of ${SESSION_DURATION / 1000}s.`);
-            // }
         }
     }); 
 
@@ -391,53 +342,20 @@ io.on('connection', async (socket) => {
             await deleteSession(sessionId);
             console.log(`[redis] sessionId:${sessionId} 삭제`);
         }
-
-
-
-        // const rawIP = socket.handshake.headers['x-forwarded-for'] || socket.handshake.address;
-        // const userIP = normalizeIP(rawIP);
-
-        // const sessionId = `${userIP}-${Date.now()}`;
-
-
-        // console.log(`[server] ${socket.nickname}[${userIP}] 서버 연결 종료.`);
-
-        // await deleteSession(sessionId); // Redis에서 세션 삭제
-        // console.log(`[server] 세션 삭제 완료: ${sessionId}`);
-
-        // removeFromWaitingQueue(socket.id);
-        // console.log(`[server] 연결 종료 처리 완료: ${socket.id}`);
-        
-
-
-
-
-
-
-
-
-        // if (sessionId) {
-        //     await deleteSession(sessionId);
-        //     handleDisconnection(socket.id);
-        //     userSessions.delete(socket.id);
-        //     console.log(`[server] 세션 삭제 완료: ${sessionId}`);
-        // }
-        
-        // if (userSessions.has(socket.id)) {
-        //     // io.emit('server-disconnect', { message: '상대방이 연결을 종료했습니다.' });
-        //     handleDisconnection(socket.id);
-        //     userSessions.delete(socket.id);
-        // } else {
-        //     console.log(`[server] Session for ${socket.id} already cleared.`);
-        // }
     });
 
     // 연결 종료 (유저 요청)
-    socket.on('user-disconnect', () => {
-        console.log(`[server] ${socket.nickname}[${socket.userIP}]유저요청 연결 종료. `);
+    socket.on('user-disconnect', async () => {
+        const sessionId = socket.handshake.query.sessionId; // Redis 세션 ID 가져오기
+        console.log(`[server] ${socket.nickname}[${socket.userIP}] 유저 요청 연결 종료.`);
+
+        if (sessionId) {
+            await deleteSession(sessionId);
+            console.log(`[redis] 세션 삭제 완료: ${sessionId}`);
+        }
         handleDisconnection(socket.id);
         socket.entered = false;
-        userSessions.delete(socket.id);
+        console.log(`[server] 유저 연결 종료 처리 완료: ${socket.id}`);
     });
 
     // 연결 종료 (신고)
@@ -525,26 +443,26 @@ function isBlocked(userIP, callback) {
 }
 
 // 유저 연결 처리 핸들러
-function handleUserConnection(socket, userIP) {
+async function handleUserConnection(socket, userIP) {
     socket.userIP = userIP;
     socket.nickname = `User_${Math.floor(Math.random() * 1000)}`;
     console.log(`[SERVER] NEW USER CONNECTED! : ${socket.nickname} [IP:${socket.userIP}]`);
 
     // 닉네임 전송
     socket.emit('set-nickname', socket.nickname);
-
-    // 세션 설정
-    const session = {
+    
+    // Redis 세션 생성 및 저장
+    const sessionId = `${userIP}-${Date.now()}`; // 고유 세션 ID 생성
+    const sessionData = {
+        nickname: socket.nickname,
+        userIP,
         lastActivity: Date.now(),
         background: false,
-        timeout: setTimeout(async () => await handleSessionTimeout(socket), SESSION_DURATION),
     };
-    // const session = {
-    //     lastActivity: Date.now(),
-    //     background: false,
-    //     timeout: setTimeout(()=>handleSessionTimeout(socket), SESSION_DURATION),
-    // };
-    userSessions.set(socket.id, session);
+
+    await saveSession(sessionId, sessionData); // Redis에 세션 저장
+    socket.handshake.query.sessionId = sessionId;
+    console.log(`[server] 세션 생성 및 저장 완료: ${sessionId}`);
 }
 
 /*
@@ -553,169 +471,87 @@ function handleUserConnection(socket, userIP) {
 
 // redis - 세션 저장
 async function saveSession(sessionId, sessionData) {
-    await redisClient.set(`session:${sessionId}`, JSON.stringify(sessionData), 'EX', 3600);
+    await redisClient.set(
+        `session:${sessionId}`,
+        JSON.stringify(sessionData),
+        'EX', // 만료 시간 설정
+        SESSION_DURATION / 1000 // 초 단위로 변환
+    );
     console.log(`[redis] sessionId:${sessionId} 저장`);
 }
+
 // redis - 세션 불러오기
 async function getSession(sessionId) {
-    const data = await redisClient.get(`session:${sessionId}`);
-
-    if (!data) {
-        console.log(`[redis] 세션이 이미 삭제되었거나 없습니다: ${sessionId}`);
+    const session = await redisClient.get(`session:${sessionId}`);
+    if (!session) {
+        console.log(`[redis] 세션이 삭제되었거나 없습니다: ${sessionId}`);
         return null;
     }
-
-    console.log(`[redis] sessionId:${sessionId} 불러오기`);
-    return data ? JSON.parse(data) : null;    
+    return JSON.parse(session);
 }
 
 // redis - 세션 삭제
 async function deleteSession(sessionId) {
-    if (!sessionId) {
-        console.error(`[redis] 세션 ID가 제공되지 않았습니다.`);
-        return;
-    }
-
-    const sessionData = await getSession(sessionId);
-    if (!sessionData) {
-        console.warn(`[redis] 세션이 이미 삭제되었거나 없습니다: ${sessionId}`);
-        return;
-    }
-
     await redisClient.del(`session:${sessionId}`);
     console.log(`[redis] 세션이 삭제되었습니다: ${sessionId}`);
-
-    // await redisClient.del(`session:${sessionId}`);
-    // console.log(`[redis] sessionId:${sessionId} 삭제`);
 }
 
 
-// 세션 초기화
-function initializeSession(socket) {
-    let session = userSessions.get(socket.id);
+async function manageRedisSession(socket, userIP) {
+    let sessionId = socket.handshake.query.sessionId;
+    let sessionData;
 
-    if (!session) {
-        console.log(`[socket.id] no session found for: ${socket.id}`)
-        session = {
+    if (sessionId) {
+        sessionData = await getSession(sessionId);
+        if (sessionData) {
+            console.log(`[server] 세션 복원 성공: ${sessionId}`);
+            sessionData.lastActivity = Date.now(); // 마지막 활동 시간 갱신
+            await saveSession(sessionId, sessionData); // 세션 갱신
+        } else {
+            console.log(`[server] 세션이 만료되었습니다. 새로운 세션 생성.`);
+            sessionId = null;
+        }
+    }
+    // 새로운 세션 생성
+    if (!sessionId || !sessionData) {
+        sessionId = `${userIP}-${Date.now()}`;
+        sessionData = {
+            userIP,
             lastActivity: Date.now(),
-            background: false,
-            timeout: null,
+            background: false, // 기본값 설정
         };
-    }
-    session.lastActivity = Date.now();
-    session.background = false;
-
-    if (session.timeout) {
-        clearTimeout(session.timeout);
+        await saveSession(sessionId, sessionData);
+        console.log(`[server] 새로운 세션 생성: ${sessionId}`);
     }
 
-    session.timeout = setTimeout(async () => {
-        await handleSessionTimeout(socket); // async 함수 호출
+    // 타임아웃 처리: 일정 시간 후 세션 만료
+    setTimeout(async () => {
+        await handleSessionTimeout(sessionId);
     }, SESSION_DURATION);
 
-    //session.timeout = setTimeout(()=> handleSessionTimeout(socket), SESSION_DURATION);
-    // session.timeout = setTimeout(()=> handleSessionTimeout(socket.id), SESSION_DURATION);
-    userSessions.set(socket.id, session);
-    console.log(`[server] SESSION initialized for ${socket.id}`);
+    return sessionId;
 }
 
 
 //세션 만료
-async function handleSessionTimeout(socket) {
-    const session = userSessions.get(socket.id);
-    if (!session) {
-        console.error(`[server] 세션을 찾을 수 없습니다. socket.id: ${socket.id}`);
+async function handleSessionTimeout(sessionId) {
+    const sessionData = await getSession(sessionId);
+
+    if (!sessionData) {
+        console.warn(`[server] 세션이 이미 만료되었거나 없습니다: ${sessionId}`);
         return;
     }
 
-    const timeSinceActivity = Date.now() - session.lastActivity;
-    if (!session.background && timeSinceActivity < SESSION_DURATION) {
-        console.warn(`[server] 세션이 여전히 활성 상태입니다. socket.id: ${socket.id}`);
+    const timeSinceActivity = Date.now() - sessionData.lastActivity;
+    if (!sessionData.background && timeSinceActivity < SESSION_DURATION) {
+        console.log(`[server] 세션이 여전히 활성 상태입니다: ${sessionId}`);
         return;
     }
 
-    userSessions.delete(socket.id); // 세션 삭제
-    removeFromWaitingQueue(socket.id); // 대기열에서 제거
-    console.log(`[server] 세션이 만료되었습니다. socket.id: ${socket.id}`);
-    // if (!socket || !socket.id) {
-    //     console.error(`[server] Invalid socket object in handleSessionTimeout`);
-    //     return;
-    // }
-
-    // const sessionId = socket.handshake.query.sessionId;
-    // const sessionData = await getSession(sessionId);
-
-    // if (!sessionData) {
-    //     console.warn(`[server] 세션이 이미 만료되었습니다: ${sessionId}`);
-    //     return;
-    // }
-
-    // const timeSinceActivity = Date.now() - sessionData.lastActivity;
-
-    // // 세션 만료 조건 확인
-    // if (timeSinceActivity < SESSION_DURATION) {
-    //     console.log(`[server] 세션이 아직 유효합니다: ${sessionId}`);
-    //     return;
-    // }
-
-    // // 세션 만료 처리
-    // await deleteSession(sessionId);
-    // console.log(`[server] 세션 만료: ${sessionId}`);
-    // socket.disconnect(true);
+    await deleteSession(sessionId); // Redis에서 세션 삭제
+    console.log(`[server] 세션 만료: ${sessionId}`);
 }
 
-// async function handleSessionTimeout(socket){
-//     if (!socket || !socket.id) {
-//         console.error(`[server] Invalid socket object in handleSessionTimeout`);
-//         return;
-//     }
-
-//     const session = userSessions.get(socket.id);
-
-//     if (!session) return;
-    
-//     const timeSinceActivity = Date.now() - session.lastActivity;
-//     if (!session.background && timeSinceActivity < SESSION_DURATION ){
-//         console.warn(`[server] Session for ${socket.id} is still active.`);
-//         return;
-//     }
-
-//     userSessions.delete(socket.id); // 세션 삭제
-//     removeFromWaitingQueue(socket.id); // 대기열 제거
-//     console.log(`[server] Session expired for socketId: ${socket.id}`);
-
-//     // 상대방 소켓도 연결종료
-//     const chatRoom = getChatRoomByUser(socket.id);
-//     if (chatRoom) {
-//         const { room, roomId } = chatRoom;
-//         const partner = room.users.find( user => user.id !== socket.id);
-
-//         if (partner) {
-//             const partnerSocket = partner.socket;
-//             if (partnerSocket.connected) {
-//                 partnerSocket.emit('chat-end', {
-//                    message: '상대방의 세션이 만료되어 연결이 종료됩니다. \n 새로운 유저를 찾습니다.',
-//                    messageType: 'system'
-//                 });
-
-//                 addToWaitingUsers(partnerSocket);
-//                 console.log(`[server] ${partnerSocket.nickname}님을 대기열에 추가합니다.`);
-//                 await matchUsers();
-//             }
-//         } 
-
-//         removeChatRoom(roomId);
-//         console.log(`[server] Removed chat room: ${chatRoom.roomId}`);
-//     }
-
-//     if (socket.connected) {
-//         console.log(`[server] ${socket.id} about session expiration.`);
-//         socket.emit('session-expired', {
-//             message: '세션이 만료되었습니다. 다시 접속해 주세요.'
-//         });
-//         socket.disconnect(true);
-//     }
-// }
 
 // 신고 데이터 저장
 function saveReport(userIP, reason, roomId) {
@@ -877,7 +713,7 @@ async function notifyChatReady(user1, user2, roomId) {
 }
 
 // 종료 핸들러
-function handleDisconnection(socketId) {
+async function handleDisconnection(socketId) {
     const chatRoom = getChatRoomByUser(socketId);
 
     if (chatRoom) {
@@ -906,9 +742,14 @@ function handleDisconnection(socketId) {
         console.log(`[server] 대기열에서 제거 : ${socketId}`);
     }
 
-    if (userSessions.has(socketId)) {
-        userSessions.delete(socketId);
-        console.log(`[server] 세션 제거: ${socketId}`);
+    // Redis에서 세션 삭제
+    const sessionId = await getSession(socketId); 
+    if (sessionId) {
+        await deleteSession(sessionId);
+        console.log(`[redis] 세션 제거: ${sessionId}`);
+    } else {
+        console.warn(`[server] 세션 ID를 찾을 수 없습니다. socketId: ${socketId}`);
     }
     console.log(`[server] 연결 종료 처리 완료: ${socketId}`);
+
 }

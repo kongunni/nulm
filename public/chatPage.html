@@ -187,7 +187,7 @@
     /* 채팅 클라이언트 */
     document.addEventListener('DOMContentLoaded', function() {
         // socket = io();
-        let sessionId = localStorage.getItem('sessionId');
+        const sessionId = localStorage.getItem('sessionId');
 
         socket = io ({
             query: { sessionId },
@@ -199,6 +199,8 @@
                 sessionId = data.sessionId;
                 localStorage.setItem('sessionId', sessionId); 
                 console.log(`[client] 세션 ID 저장: ${sessionId}`);
+            } else {
+                console.warn('[client] 세션 ID를 받을 수 없습니다.');
             }
         });
 
@@ -253,6 +255,11 @@
 
         // session 액션 처리
         document.addEventListener('visibilitychange', () => {
+            if (!socket || !socket.connected) {
+                console.warn('[client] 서버와의 연결이 끊어졌습니다.');
+                return;
+            }
+
             if (document.visibilityState === 'visible') {
                 console.log('[client] Tab returned to foreground. Reset session.');
                 socket.emit('session-action', 'reset');
