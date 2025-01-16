@@ -3,8 +3,39 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>신고 목록</title>
+    <title>관리자 페이지</title>
     <style>
+        /* 기본 스타일 */
+        body {
+            font-family: Arial, sans-serif;
+        }
+        h1 {
+            text-align: center;
+        }
+        .tab-container {
+            display: flex;
+            justify-content: center;
+            margin: 20px 0;
+        }
+        .tab {
+            padding: 10px 20px;
+            margin: 0 5px;
+            cursor: pointer;
+            background-color: #f2f2f2;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        .tab.active {
+            background-color: #ddd;
+            font-weight: bold;
+        }
+        .tab-content {
+            display: none;
+            margin-top: 20px;
+        }
+        .tab-content.active {
+            display: block;
+        }
         table {
             width: 100%;
             border-collapse: collapse;
@@ -20,22 +51,56 @@
     </style>
 </head>
 <body>
-    <h1>신고 목록</h1>
-    <table id="reportTable">
-        <thead>
-            <tr>
-                <th>신고대상IP</th>
-                <th>채팅방</th>
-                <th>사유</th>
-                <th>날짜</th>
-            </tr>
-        </thead>
-        <tbody id="reportBody">
-            <!-- 동적으로 데이터가 추가될 부분 -->
-        </tbody>
-    </table>
+    <h1>관리자 페이지</h1>
+
+    <!-- 탭 UI -->
+    <div class="tab-container">
+        <div class="tab active" id="reports-tab">신고 누적</div>
+        <div class="tab" id="blocklist-tab">차단 유저</div>
+    </div>
+
+    <!-- 신고 목록 -->
+    <div class="tab-content active" id="reports-content">
+        <h2>신고 목록</h2>
+        <table id="reportTable">
+            <thead>
+                <tr>
+                    <th>신고대상IP</th>
+                    <th>채팅방</th>
+                    <th>사유</th>
+                    <th>날짜</th>
+                </tr>
+            </thead>
+            <tbody id="reportBody">
+                <!-- 신고 데이터가 여기에 추가됩니다. -->
+            </tbody>
+        </table>
+    </div>
+
+    <!-- 차단 목록 -->
+    <div class="tab-content" id="blocklist-content">
+        <h2>차단 유저</h2>
+        <ul id="blocklist">
+            <!-- 차단 데이터가 여기에 추가됩니다. -->
+        </ul>
+    </div>
+
     <script>
-        // 서버에서 JSON 데이터를 받아오기
+        // 탭 전환 로직
+        const tabs = document.querySelectorAll('.tab');
+        const tabContents = document.querySelectorAll('.tab-content');
+
+        tabs.forEach((tab, index) => {
+            tab.addEventListener('click', () => {
+                tabs.forEach(t => t.classList.remove('active'));
+                tabContents.forEach(c => c.classList.remove('active'));
+
+                tab.classList.add('active');
+                tabContents[index].classList.add('active');
+            });
+        });
+
+        // 서버에서 신고 데이터 가져오기
         fetch('/api/reports')
             .then(response => response.json())
             .then(data => {
@@ -43,35 +108,48 @@
                 
                 data.forEach(report => {
                     const row = document.createElement('tr');
-    
+
                     // IP 추가
                     const ipCell = document.createElement('td');
                     ipCell.textContent = report.ip;
                     row.appendChild(ipCell);
-    
+
                     // 채팅방 정보 추가
                     const roomIdCell = document.createElement('td');
-                    roomIdCell.innerHTML = report.roomId.replace(/\n/g, '<br>'); // 줄바꿈 <br> 처리
+                    roomIdCell.innerHTML = report.roomId.replace(/\n/g, '<br>');
                     row.appendChild(roomIdCell);
-    
+
                     // 사유 정보 추가
                     const reasonCell = document.createElement('td');
-                    reasonCell.innerHTML = report.reason.replace(/\n/g, '<br>'); // 줄바꿈 <br> 처리
+                    reasonCell.innerHTML = report.reason.replace(/\n/g, '<br>');
                     row.appendChild(reasonCell);
-    
+
                     // 날짜 정보 추가
                     const timeCell = document.createElement('td');
-                    timeCell.innerHTML = report.time.replace(/\n/g, '<br>'); // 줄바꿈 <br> 처리
+                    timeCell.innerHTML = report.time.replace(/\n/g, '<br>');
                     row.appendChild(timeCell);
-    
-                    // 테이블에 행 추가
+
                     tableBody.appendChild(row);
                 });
             })
             .catch(error => {
                 console.error('Error fetching report data:', error);
             });
+
+        // 서버에서 차단 목록 가져오기
+        fetch('/admin/blocklist')
+            .then(response => response.json())
+            .then(data => {
+                const blocklist = document.getElementById('blocklist');
+                data.forEach(ip => {
+                    const listItem = document.createElement('li');
+                    listItem.textContent = ip;
+                    blocklist.appendChild(listItem);
+                });
+            })
+            .catch(error => {
+                console.error('Error fetching blocklist data:', error);
+            });
     </script>
-    
 </body>
 </html>

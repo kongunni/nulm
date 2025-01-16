@@ -19,6 +19,7 @@ const io = new Server(server);
 // import fs from 'fs-extra';
 import { saveChatLog } from '../utils/chatLogger.js';
 import { report } from 'process';
+import { userInfo } from 'os';
 // import { time } from 'console';
 const LOGGER_SERVER_URL = 'http://localhost:4000/log'; // 로깅 서버 URL
 
@@ -38,6 +39,7 @@ app.use(express.json()); // JSON 데이터 파싱을 위한 미들웨어
 /*
  * 신고 처리 API: 클라이언트가 신고 데이터를 전송하면 이를 처리
  */
+const BLOCKLIST_KEY = 'blocklist';
 
 app.get('/admin=:id&:password/reports', (req, res) => {
     const { id, password } = req.params;
@@ -49,7 +51,6 @@ app.get('/admin=:id&:password/reports', (req, res) => {
     // reportList.html 파일 경로를 제공
     res.sendFile(path.join(__dirname, '../public', 'reportList.html'));
 });
-
 
 app.get('/api/reports', (req, res) => {
     // redis 데이터 조회
@@ -100,6 +101,47 @@ app.get('/api/reports', (req, res) => {
     });
 });
 
+app.post('/admin/blocklist', (req, res) => {
+    const { ip } = req.body; // 요청에서 IP 가져오기
+
+    if (!ip) {
+        return res.status(400).send('IP 주소가 제공되지 않았습니다.');
+    }
+
+    redisClient.sadd(BLOCKLIST_KEY, ip, (err) => {
+        if (err) {
+            console.error('[redis] Blocklist 추가 오류:', err);
+            return res.status(500).send('서버 오류');
+        }
+        res.send(`IP ${ip}가 차단 목록에 추가되었습니다.`);
+    });
+});
+
+app.delete('/admin/blocklist', (req, res) => {
+    const { ip } = req.body; // 요청에서 IP 가져오기
+
+    if (!ip) {
+        return res.status(400).send('IP 주소가 제공되지 않았습니다.');
+    }
+
+    redisClient.srem(BLOCKLIST_KEY, ip, (err) => {
+        if (err) {
+            console.error('[redis] Blocklist 삭제 오류:', err);
+            return res.status(500).send('서버 오류');
+        }
+        res.send(`IP ${ip}가 차단 목록에서 제거되었습니다.`);
+    });
+});
+
+app.get('/admin/blocklist', (req, res) => {
+    redisClient.smembers(BLOCKLIST_KEY, (err, blocklist) => {
+        if (err) {
+            console.error('[redis] Blocklist 조회 오류:', err);
+            return res.status(500).send('서버 오류');
+        }
+        res.json(blocklist);
+    });
+});
 
 const PORT = process.env.PORT || 3000;
 server.listen(3000, () => {
@@ -109,6 +151,7 @@ server.listen(3000, () => {
 const waitingUsers = new Map(); //대기열 관리
 const activeChats = new Map(); //활성채팅
 const MAX_REPORT = 3; // 최대 리포트 수 
+
 
 // 세션 타임아웃 설정
 // const SESSION_DURATION = 1 * 60 * 1000; //test time 
@@ -121,14 +164,14 @@ function normalizeIP(ip) {
     // (IPv6 localhost) 변환
     if (ip === "::1") {
         return "127.0.0.1";
-    }
-    // IPv6에서 IPv4 주소 추출
-    if (ip.startsWith("::ffff:")) {
+    } else  if (ip.startsWith("::ffff:")) {
+        // IPv6에서 IPv4 주소 추출
         return ip.replace("::ffff:", "");
     }
     return ip;
 }
 
+// socket 연결
 io.on('connection', async (socket) => {
     socket.entered=false;
 
@@ -137,49 +180,35 @@ io.on('connection', async (socket) => {
 
         if(!socket.entered) {
             socket.entered = true; // 버튼을 눌렀을때만 상태변경 
-            // 유저
-            socket.userIP = normalizeIP(socket.handshake.address); // IPv4형식으로 반환
-            socket.nickname = `User_${Math.floor(Math.random() * 1000)}`;
-            console.log(`[SERVER] NEW USER CONNECTED! : ${socket.nickname} [IP:${socket.userIP}]`);
-
-            // 클라이언트에 닉네임 전송
-            socket.emit('set-nickname', socket.nickname);
-
-            //세션 설정
-            const session = {
-                lastActivity : Date.now(),
-                background: false, 
-                // timeout: setTimeout(()=>handleSessionTimeout(socket.id), SESSION_DURATION),
-                timeout: setTimeout(()=>handleSessionTimeout(socket), SESSION_DURATION),
-            };
-
-           userSessions.set(socket.id, session);
-
-            // 세션 set 확인용
-            for (const [socketId, session] of userSessions.entries()) {
-                console.log(`[server] Session for ${socket.id}:`);
-                console.log(`  Last Activity: ${new Date(session.lastActivity).toISOString()}`);
-                console.log(`  Background: ${session.background}`);
-                console.log(`  Timeout: ${session.timeout}`);
-            }
-
             
+            const userIP = normalizeIP(socket.handshake.address);
 
-
-            addToWaitingUsers(socket); //대기열 추가
-
-            // 대기 상태 메시지 전송
-            await delay(1000);
-            socket.emit('wait-state', {
-                message: "상대 유저를 찾는 중입니다. \n 잠시만 기다려 주세요.",
-                messageType: 'system'
+            isBlocked(userIP, (blocked) => {
+                if (blocked) {
+                    console.log(`[server] 차단된 IP ${userIP} 접속 불가`);
+                    socket.emit('connection-rejected', {
+                        message: '접근이 제한된 유저입니다. 관리자에게 문의해 주세요.'
+                    });
+                    socket.disconnect(true); 
+                } else {
+                    console.log(`[server] 새로운 사용자 ${userIP} 접속`);
+                    
+                    handleUserConnection(socket, userIP);
+                    addToWaitingUsers(socket); //대기열 추가
+                    
+                    // 대기 상태 메시지 전송
+                    // delay(1000).then(()=> {
+                        socket.emit('wait-state', {
+                            message: "상대 유저를 찾는 중입니다. \n 잠시만 기다려 주세요.",
+                            messageType: 'system'
+                        });
+                    // });
+                    // 대기열 추가된 유저들과 랜덤 매칭
+                    matchUsers();
+                }
             });
-            // 대기열 추가된 유저들과 랜덤 매칭
-            matchUsers();
-        } else {
-            console.log(`[server] ${socket.nickname} ALREADY ENTERED`);
         }
-    });
+    }); //enter-state end
 
 
     // 메시지 전송 처리
@@ -335,45 +364,45 @@ io.on('connection', async (socket) => {
         // MAX_REPORT 확인
         checkMaxReports(partnerIP, (isMaxReportExceeded) => {
             if (isMaxReportExceeded) {
-                partnerSocket.emit('report-redirect', { message: `${partnerIP}님은 신고 한도를 초과하여 접근이 제한됩니다. `});
+                addToBlockList(partnerIP);
+                console.log(`[server] ${partnerIP}님은 신고 한도 초과로 접근이 제한되었습니다.`)
+                partnerSocket.emit('report-redirect', {
+                     message: `${partnerIP}님은 신고 한도를 초과하여 접근이 제한됩니다. `
+                });
                 // 연결종료 //세션삭제
                 partnerSocket.disconnect(true); 
-                
             } else {
-                setTimeout(() => {
-                    addToWaitingUsers(partnerSocket);
-                    console.log(`[server] ${partnerIP}님을 3초후 대기열에 추가합니다.`);
-                    matchUsers();
-                }, 3000);
+                if (partnerSocket) {
+                    setTimeout(() => {
+                        addToWaitingUsers(partnerSocket);
+                        console.log(`[server] ${partnerIP}님을 5초후 대기열에 추가합니다.`);
+                        matchUsers();
+                    }, 5000);
+                }
             }
         });
         
-        // 신고자 메시지 처리
-        reporterSocket.emit('chat-end', {
+        if (reporterSocket) {
+            setTimeout( () => {
+                addToWaitingUsers(reporterSocket);
+                console.log(`[server] ${reporterSocket.userIP}님을 대기열에 즉시 추가합니다.`);
+                matchUsers();
+            }, 2000);
+        }
+    
+        // 클라이언트에게 알림
+        reporterSocket?.emit('chat-end', {
             message: '신고가 접수되어 연결을 종료합니다.',
             messageType: 'system'
         });
-        reporterSocket.disconnect(true); 
-        
-        // 신고 대상 메시지 처리
-        if (partnerSocket) {
-            partnerSocket.emit('chat-end', {
-                message: '신고로 인해 연결이 종료되었습니다.',
-                messageType: 'system',
-            });
-            partnerSocket.disconnect(true);
-
-        }
-        
-        // 신고자 대기열 추가 및 즉시 매칭
-        addToWaitingUsers(reporterSocket);
-        console.log(`[server] ${reporterSocket.userIP}님을 대기열에 즉시 추가합니다.`);
-        matchUsers();
-
+    
+        partnerSocket?.emit('chat-end', {
+            message: '상대방이 연결을 종료했습니다.',
+            messageType: 'system'
+        });
 
         // 서버 응답 전송
-        reporterSocket.emit('report-response', { success: true, message: '신고가 처리되었습니다.' });
-      
+        // reporterSocket.emit('report-response', { success: true, message: '신고가 처리되었습니다.' });
     })
 
 
@@ -386,7 +415,39 @@ function delay(ms) {
     return new Promise(resolve => setTimeout(resolve, ms));
 }
 
+// 차단 여부 확인 (유저 접근 제한)
+function isBlocked(userIP, callback) {
+    redisClient.sismember(BLOCKLIST_KEY, userIP, (err, isMember) => {
+        if (err) {
+            console.error(`[redis] Blocklist 조회 오류: ${err}`);
+            callback(false); // 에러 시 차단되지 않은 것으로 간주
+            return;
+        } 
+        console.log(`[debug] BLOCKLIST : ${userIP}, blocked: ${isMember}`);
+        callback(isMember === 1);
+        // else {
+        //     callback(isMember === 1); // Redis `sismember`는 1이면 존재
+        // }
+    });
+}
 
+// 유저 연결 처리 핸들러
+function handleUserConnection(socket, userIP) {
+    socket.userIP = userIP;
+    socket.nickname = `User_${Math.floor(Math.random() * 1000)}`;
+    console.log(`[SERVER] NEW USER CONNECTED! : ${socket.nickname} [IP:${socket.userIP}]`);
+
+    // 닉네임 전송
+    socket.emit('set-nickname', socket.nickname);
+
+    // 세션 설정
+    const session = {
+        lastActivity: Date.now(),
+        background: false,
+        timeout: setTimeout(()=>handleSessionTimeout(socket), SESSION_DURATION),
+    };
+    userSessions.set(socket.id, session);
+}
 
 // 세션 초기화
 function initializeSession(socket) {
@@ -482,15 +543,32 @@ function saveReport(userIP, reason, roomId) {
     });
 }
 
+// block list 추가
+function addToBlockList(userIP) {
+    redisClient.sadd(BLOCKLIST_KEY, userIP, (err) => {
+        if(err) {
+            console.error('[server] blocklist 추가 오류: ', err);
+        } else {
+            console.log(`[server] blocklist 추가된 유저: ${userIP}`);
+        }
+    });
+}
+
 // 신고 - MAX_REPORT 초과 확인
 function checkMaxReports(userIP, callback) {
-    redisClient.llen(`report: ${userIP}`, (err, count)=>{
+    redisClient.llen(`reports: ${userIP}`, (err, count)=>{
         if (err) {
-            console.error('[redis] 조회 오류:', err);
-            callback(false);
-        } else {
-            callback(count >= MAX_REPORT);
+                console.error('[redis] 조회 오류:', err);
+                callback(false);
+                return;
         }
+        console.log(`[debug] 신고횟수확인: ${userIP} : ${count}`);
+        
+        const isExceeded = count >= MAX_REPORT;
+        if (isExceeded) {
+            addToBlockList(userIP);
+        }
+        callback(isExceeded);
     });
 }
 

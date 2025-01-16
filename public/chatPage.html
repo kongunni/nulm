@@ -183,61 +183,8 @@
         
        
         // 서버 응답 처리
-        // closeReportModal();
+        closeReportModal();
     }
-
-
-
-
-    //report submit
-    //  function submitReport() {
-    //         const reportForm = document.getElementById('reportForm');
-    //         const reasons = Array.from(reportForm.querySelectorAll('input[name="reason"]:checked')).map(input => input.value);
-            
-    //         if(reasons.length === 0) {
-    //             alert('신고 사유를 선택해 주세요. ');
-    //             return;
-    //         }
-
-    //         console.log('roomId: ', roomId, 'partner: ', partnerNickname, '[IP:', partnerIP , ']', 'reason: ', reasons);
-            
-    //         if (!roomId || !partnerNickname || !partnerIP) {
-    //             alert('잘못된 요청입니다. 다시 시도해 주세요. ');
-    //             return;
-    //         }
-
-    //         fetch('/chat/report', {
-    //             method: 'POST',
-    //             headers: { 'Content-Type': 'application/json' },
-    //             body: JSON.stringify({
-    //                 reasons,
-    //                 roomId,
-    //                 partnerNickname,
-    //                 partnerIP,
-    //                 reporterId: socket.id //신고자 socketId
-    //             })
-    //         })
-    //         .then(response => {
-    //             if (!response.ok) throw new Error(`HTTP error: ${response.status}`);
-    //             return response.json();
-    //         })
-    //         .then(data => {
-    //             alert(data.message); // 서버 응답 처리
-    //             console.log('[client] server repsponse data: ', data);
-    //             if (socket && roomId) {
-    //                 console.log('[client] Calling socket.emit for report-disconnected...');
-    //                 socket.emit('report-disconnected', { roomId });
-    //             }
-    //             closeReportModal();
-    //         })
-    //         .catch(err => {
-    //             console.error('Error reporting user:', err);
-    //             alert('신고 처리 중 오류가 발생했습니다.');
-    //         })
-    //         .finally(()=>{
-    //             resetReportModal();
-    //         });
-    //     }
 
 
 
@@ -404,7 +351,7 @@
         // max_report 초과 대상 접속 불가처리
         socket.on('report-redirect', (data) => {
             console.log(data.message);
-            window.location.href = 'reportUser.html';
+            window.location.href = 'accessDenied.html';
         });
 
         //신고처리
@@ -416,9 +363,13 @@
             }
             closeReportModal();
         });
+
+        // 접속 차단 회원 처리
+        socket.on('connection-rejected', (data)=> {
+            alert(data.message);
+            window.location.href='accessDenied.html';
+        });
         
-
-
         // session - expired
         socket.on('session-expired', (data) => {
             // 세션 만료 시 UI 초기화
@@ -511,6 +462,7 @@
             appendMessages(data.message, data.messageType);
         });
 
+        // 경고 메시지 수신
         socket.on('warning-message', (data) => {
             appendMessages(data.message, data.messageType);
         });
@@ -545,14 +497,12 @@
             if (chatHeader) {
                 chatHeader.textContent = ''; // 닉네임 제거
             }
-
             // 입력창 비활성화
             const inputBox = document.getElementById('inputBox');
             if (inputBox) {
                 inputBox.style.display = 'none';
             }
         });
-
 
         // 상대방의 요청으로 채팅 종료
         socket.on('user-disconnect', (data) => {
@@ -564,7 +514,6 @@
                 console.log('chatHeader content cleared.');
             }
             document.getElementById('inputBox').style.display='none'; // 입력창 비활성화
-
         });
 
         // 이벤트 리스너 추가
