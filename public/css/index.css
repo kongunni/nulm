@@ -1,16 +1,3 @@
-/* @font-face {
-    font-family: 'twaysky';
-    src: url('https://fastly.jsdelivr.net/gh/projectnoonnu/noonfonts_tway@1.0/twaysky.woff') format('woff');
-    font-weight: normal;
-    font-style: normal;
-}
-@font-face {
-    font-family: 'YdestreetB';
-    src: url('https://fastly.jsdelivr.net/gh/projectnoonnu/noonfonts_2110@1.0/YdestreetB.woff2') format('woff2');
-    font-weight: normal;
-    font-style: normal;
-} */
-
 body, html {
     overflow-x: hidden;
 }
@@ -288,10 +275,6 @@ body, html {
 
 
 @media screen and (max-width: 844px) {
-    /* .nav-container {
-        border-bottom: 2px solid #e65729;
-        background-color: #fdf6ed;
-    } */
     /*intro-text*/
     .intro-text-primary {
         font-size: 80px;
@@ -300,18 +283,6 @@ body, html {
     .intro-text-secondary {
         font-size: 24px;
     }
-
-    /* .box-2 {
-        justify-content: center !important;
-        align-items: flex-start;
-        display: flex;
-        padding-left: 10px !important;
-    } */
-
-    /* box-2의 그리드 */
-   /* .link_img{
-         margin-left: 0;
-   } */
 
     #icon_insta, #icon_youtube {
         width: 35px;

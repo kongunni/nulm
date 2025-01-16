@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>nulm:admin</title>
+    <link rel="icon" type="image/png" href="../images/nulm_icon.png">
+    <link rel="stylesheet" href="../css/fonts.css">
+    <style>
+
+    body {
+        font-family:system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+        background-color: #FAF3EB; /* 이미지와 통일된 배경색 */
+        margin: 0;
+        padding: 0;
+        color: #333;
+    }
+
+    h1 {
+        text-align: center;
+        font-size: 2.5rem;
+        font-weight: bold;
+        margin: 20px 0;
+        color: #e65729;
+    }
+
+    .header-logo {
+        display: flex;
+        justify-content: flex-start;
+        background-color: black;
+        height: 10px;
+    }
+    
+    .logo {
+        font-family:  'DOSMyungjo';
+        font-size: 28px;
+        margin-left: 20px;
+
+    }
+
+    a {
+        text-decoration: none;
+        color: inherit;
+    }
+
+    .header-container {
+        width: 100%;
+        height: 150px;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        background-color: black;
+    } 
+    
+    .header-text {
+        font-family: 'DOSMyungjo';
+        font-size: 60px;
+    }
+
+    .tab-container {
+        display: flex;
+        justify-content: center;
+        margin: 20px auto;
+        border-bottom: 2px solid #FF6A3D;
+    }
+
+    .tab {
+        padding: 15px 30px;
+        font-size: 1.2rem;
+        font-weight: bold;
+        color: black;
+        border: none;
+        background-color: transparent;
+        cursor: pointer;
+        transition: color 0.3s, border-bottom 0.3s;
+        position: relative;
+    }
+
+    .tab:hover {
+        color: #FF3C00;
+    }
+
+    .tab.active {
+        color: #FF3C00;
+        border-bottom: 3px solid #FF3C00;
+    }
+
+    /* 콘텐츠 영역 */
+    .tab-content {
+        display: none;
+        margin: 40px auto;
+        width: 80%;
+        max-width: 1200px;
+        background-color: #FFFFFF;
+        border-radius: 10px;
+        box-shadow: 0 8px 15px rgba(0, 0, 0, 0.1);
+        padding: 30px;
+    }
+
+    .tab-content.active {
+        display: block;
+    }
+
+    .sub-title {
+        font-size: 18px;
+    }
+    table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 20px;
+        table-layout: fixed;
+        word-wrap: break-word;
+        overflow-wrap: break-word;
+    }
+    
+    th, td {
+        text-align: left;
+        padding: 12px 15px;
+        font-size: 1rem;
+        overflow: hidden;
+        white-space: normal;
+        text-overflow: clip;
+    }
+
+    th {
+        background-color: #FF6A3D;
+        color: black;
+        font-weight: bold;
+        text-transform: uppercase;
+    }
+
+    tr:nth-child(even) {
+        background-color: #FDF3E9;
+    }
+
+    tr:hover {
+        background-color: #FFEEE5;
+    }
+
+    td {
+        border-bottom: 1px solid #FFEEE5;
+    }
+
+    #ip {
+        width: 10%;
+    }
+
+    #room {
+        width: 60%;
+    }
+
+    #reason {
+        width: 10%;
+    }
+    #date {
+        width: 20%;
+    }
+
+    #ip, #room, #reason, #date {
+        justify-content: center;
+        text-align: center;
+        align-items: center;
+    }
+
+    /* 차단 목록 */
+    #blocklist {
+        margin-top: 20px;
+        padding: 0;
+        list-style: none;
+    }
+
+    #blocklist li {
+        padding: 15px;
+        margin-bottom: 10px;
+        background-color: #FFEEE5;
+        color: #e65729;
+        font-weight: bold;
+        border-radius: 5px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    /* 버튼 스타일 */
+    .button {
+        padding: 10px 20px;
+        font-size: 1rem;
+        color: white;
+        background-color: #e65729;
+        border: none;
+        border-radius: 5px;
+        cursor: pointer;
+        transition: background-color 0.3s;
+    }
+
+    .button:hover {
+        background-color: #FF3C00;
+    }
+
+    #pagination .button.active {
+        background-color: #FF6A3D;
+        color: white;
+        font-weight: bold;
+    }
+
+    </style>
+</head>
+<body>
+    <div class="header-logo">
+        <h1 class="logo"><a href="../index.html">Nulm.</a></h1>
+    </div>
+
+    <div class="header-container">
+        <h1 class="header-text"> admin page </h1>
+    </div>
+   
+    <!-- 탭 UI -->
+    <div class="tab-container">
+        <div class="tab active" id="reports-tab">HISTORY</div>
+        <div class="tab" id="blocklist-tab">BLOCK</div>
+    </div>
+
+    <!-- 신고 목록 -->
+    <div class="tab-content active" id="reports-content">
+        <h2 class="sub-title">#REPORT HISTORY</h2>
+        <table id="reportTable">
+            <thead>
+                <tr>
+                    <th id="ip">IP</th>
+                    <th id="room">ROOM</th>
+                    <th id="reason">REASON</th>
+                    <th id="date">DATE</th>
+                </tr>
+            </thead>
+            <tbody id="reportBody">
+
+            </tbody>
+        </table>
+    </div>
+
+    <!-- 차단 목록 -->
+    <div class="tab-content" id="blocklist-content">
+        <h2 class="sub-title">#BLOCK USER LIST</h2>
+        <ul id="blocklist">
+        
+        </ul>
+    </div>
+
+    <div id="pagination" style="text-align: center; margin: 20px;"></div>
+
+    <script>
+       
+    // 페이징
+    const ITEMS_PER_PAGE = 10;
+    let currentPage = 1;
+    let totalPages = 0;
+
+    // 탭 전환
+    const tabs = document.querySelectorAll('.tab');
+    const tabContents = document.querySelectorAll('.tab-content');
+
+    tabs.forEach((tab, index) => {
+        tab.addEventListener('click', () => {
+            tabs.forEach(t => t.classList.remove('active'));
+            tabContents.forEach(c => c.classList.remove('active'));
+
+            tab.classList.add('active');
+            tabContents[index].classList.add('active');
+
+            if (tab.id === 'blocklist-tab') {
+                loadBlocklist();
+            }
+        });
+    });
+
+    // 차단 목록 로드
+    function loadBlocklist() {
+        fetch('/admin/blocklist')
+            .then(response => response.json())
+            .then(data => {
+                const blocklist = document.getElementById('blocklist');
+                blocklist.innerHTML = '';
+
+                data.forEach(ip => {
+                    const listItem = document.createElement('li');
+                    listItem.textContent = ip;
+                    blocklist.appendChild(listItem);
+                });
+            })
+            .catch(error => console.error('Error fetching blocklist data:', error));
+    }
+
+    // reports redis 호출
+    fetch(`/api/reports`)
+        .then(response => response.json())
+        .then(data => {
+            const totalItems = data.length;
+            totalPages = Math.ceil(totalItems / ITEMS_PER_PAGE);
+            renderReports(data.slice(0, ITEMS_PER_PAGE));
+            setupPagination(data);
+        })
+        .catch(error => console.error('Error fetching report data:', error));
+
+    function renderReports(reports) {
+        const tableBody = document.getElementById('reportBody');
+        tableBody.innerHTML = '';
+
+        reports.forEach(report => {
+            const row = document.createElement('tr');
+
+            const ipCell = document.createElement('td');
+            ipCell.textContent = report.ip;
+            row.appendChild(ipCell);
+
+            const roomIdCell = document.createElement('td');
+            roomIdCell.innerHTML = report.roomId.replace(/\n/g, '<br>');
+            row.appendChild(roomIdCell);
+
+            const reasonCell = document.createElement('td');
+            reasonCell.innerHTML = report.reason.replace(/\n/g, '<br>');
+            row.appendChild(reasonCell);
+
+            const timeCell = document.createElement('td');
+            timeCell.innerHTML = report.time.replace(/\n/g, '<br>');
+            row.appendChild(timeCell);
+
+            tableBody.appendChild(row);
+        });
+    }
+
+    function setupPagination(data) {
+        const paginationContainer = document.getElementById('pagination');
+        paginationContainer.innerHTML = '';
+
+        for (let i = 1; i <= totalPages; i++) {
+            const pageButton = document.createElement('button');
+            pageButton.textContent = i;
+            pageButton.classList.add('button');
+            if (i === currentPage) pageButton.classList.add('active');
+
+            pageButton.addEventListener('click', () => {
+                currentPage = i;
+                const start = (currentPage - 1) * ITEMS_PER_PAGE;
+                const end = start + ITEMS_PER_PAGE;
+                renderReports(data.slice(start, end));
+            });
+
+            paginationContainer.appendChild(pageButton);
+        }
+    }
+
+    // block list redis 호출
+    fetch('/admin/blocklist')
+        .then(response => response.json())
+        .then(data => {
+            const blocklist = document.getElementById('blocklist');
+            blocklist.innerHTML = '';
+
+            data.forEach(ip => {
+                const listItem = document.createElement('li');
+                listItem.textContent = ip;
+                blocklist.appendChild(listItem);
+            });
+        })
+        .catch(error => console.error('Error fetching blocklist data:', error));
+    </script>
+</body>
+</html>

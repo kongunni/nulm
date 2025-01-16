@@ -48,8 +48,7 @@ app.get('/admin=:id&:password/reports', (req, res) => {
         return res.status(403).send('잘못된 접근입니다.');
     }
 
-    // reportList.html 파일 경로를 제공
-    res.sendFile(path.join(__dirname, '../public', 'reportList.html'));
+    res.sendFile(path.join(__dirname, '../public', 'adminPage.html'));
 });
 
 app.get('/api/reports', (req, res) => {
@@ -150,7 +149,7 @@ server.listen(3000, () => {
 
 const waitingUsers = new Map(); //대기열 관리
 const activeChats = new Map(); //활성채팅
-const MAX_REPORT = 3; // 최대 리포트 수 
+const MAX_REPORT = 20; // 최대 리포트 수 
 
 
 // 세션 타임아웃 설정
