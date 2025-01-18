@@ -483,6 +483,16 @@
             appendMessages(data.message , data.messageType);
         });
 
+        // 동시접속 테스트용 
+        // 매칭 완료 이벤트 수신
+        socket.on('matched', (data) => {
+            console.log(`[client-debug] Matched event received:`, data);
+            partner = data.users.find(user => user.id !== socket.id);
+            roomId= data.roomId;
+            partnerNickname = partner.nickname;
+            console.log(`[test] USER: ${socket.id} matched with ${data.partner}. Room ID: ${data.roomId}`);console.log(`[Client ${clientIndex}] You are matched with ${partner}. Room ID: ${roomId}`);
+        });
+
         // 채팅 준비 완료 시 상대방 닉네임 표시
         socket.on('chat-ready', (data) => {
             // 상대방 정보 표시

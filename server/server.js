@@ -726,7 +726,24 @@ async function matchUsers() {
         const [user1, user2] = users;
         const roomId = createChatRoom(user1, user2);
         await notifyChatReady(user1, user2, roomId);
-        console.log(`[server] Successfully matched users: ${user1.nickname} and ${user2.nickname} in room: ${roomId}`);
+    
+
+        /* 동접자 테스트용 - 매칭 우저에게 알림 전송*/
+        user1.socket.emit('matched', {
+            message: 'You have been matched!',
+            roomId: roomId,
+            partner: {
+                id: user2.socket.id,
+                nickname: user2.socket.nickname,
+                userIP: user2.socket.userIP,
+            },
+        });
+        
+        console.log(`[server-debug] Matched event data for ${user1.socket.nickname}:`, {
+            roomId, partner: user2.socket.nickname,
+        });
+        
+
     } else {
         console.log(`[server] Not enough users to match.`);
     }
@@ -747,6 +764,10 @@ async function notifyChatReady(user1, user2, roomId) {
     await delay(1000);
     user1.socket.emit('chat-ready', chatReadyPayload(user1, user2));
     user2.socket.emit('chat-ready', chatReadyPayload(user2, user1));
+
+    // 디버깅용 로그 추가
+    console.log(`[server] Sending chat-ready payload to ${user1.nickname}:`, chatReadyPayload(user1, user2));
+    console.log(`[server] Sending chat-ready payload to ${user2.nickname}:`, chatReadyPayload(user2, user1));
 
     // 방 전체에 경고 메시지 전송
     await delay(1500);
